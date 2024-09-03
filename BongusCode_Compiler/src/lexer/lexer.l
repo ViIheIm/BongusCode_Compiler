@@ -30,6 +30,8 @@ KWD_I32			"i32"
 KWD_UI64		"ui64"
 KWD_I64			"i64"
 
+KWD_RETURN		"Claudere"
+
 ID				[[:alpha:]_][[:alnum:]_]*
 NUM_LIT			0|[1-9][0-9]*
 
@@ -75,6 +77,10 @@ SEMI			\.
 {KWD_I64}
 	LEXLOG(L"Found KWD_I64: %s\n", wstr().c_str());
 	return BTok::KWD_I64;
+
+{KWD_RETURN}
+	LEXLOG(L"Found KWD_RETURN: %s\n", wstr().c_str());
+	return BTok::KWD_RETURN;
 
 {ID}
 	LEXLOG(L"Found ID: %s\n", wstr().c_str());

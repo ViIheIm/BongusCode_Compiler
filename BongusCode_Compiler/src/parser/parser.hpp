@@ -253,16 +253,17 @@ namespace yy {
     KWD_I32 = 263,                 // KWD_I32
     KWD_UI64 = 264,                // KWD_UI64
     KWD_I64 = 265,                 // KWD_I64
-    EQ_OP = 266,                   // EQ_OP
-    PLUS_OP = 267,                 // PLUS_OP
-    MINUS_OP = 268,                // MINUS_OP
-    MUL_OP = 269,                  // MUL_OP
-    DIV_OP = 270,                  // DIV_OP
-    LPAREN = 271,                  // LPAREN
-    RPAREN = 272,                  // RPAREN
-    LCURLY = 273,                  // LCURLY
-    RCURLY = 274,                  // RCURLY
-    SEMI = 275                     // SEMI
+    KWD_RETURN = 266,              // KWD_RETURN
+    EQ_OP = 267,                   // EQ_OP
+    PLUS_OP = 268,                 // PLUS_OP
+    MINUS_OP = 269,                // MINUS_OP
+    MUL_OP = 270,                  // MUL_OP
+    DIV_OP = 271,                  // DIV_OP
+    LPAREN = 272,                  // LPAREN
+    RPAREN = 273,                  // RPAREN
+    LCURLY = 274,                  // LCURLY
+    RCURLY = 275,                  // RCURLY
+    SEMI = 276                     // SEMI
       };
       /// Backward compatibility alias (Bison 3.6).
       typedef token_kind_type yytokentype;
@@ -279,7 +280,7 @@ namespace yy {
     {
       enum symbol_kind_type
       {
-        YYNTOKENS = 21, ///< Number of tokens.
+        YYNTOKENS = 22, ///< Number of tokens.
         S_YYEMPTY = -2,
         S_YYEOF = 0,                             // "end of file"
         S_YYerror = 1,                           // error
@@ -292,29 +293,31 @@ namespace yy {
         S_KWD_I32 = 8,                           // KWD_I32
         S_KWD_UI64 = 9,                          // KWD_UI64
         S_KWD_I64 = 10,                          // KWD_I64
-        S_EQ_OP = 11,                            // EQ_OP
-        S_PLUS_OP = 12,                          // PLUS_OP
-        S_MINUS_OP = 13,                         // MINUS_OP
-        S_MUL_OP = 14,                           // MUL_OP
-        S_DIV_OP = 15,                           // DIV_OP
-        S_LPAREN = 16,                           // LPAREN
-        S_RPAREN = 17,                           // RPAREN
-        S_LCURLY = 18,                           // LCURLY
-        S_RCURLY = 19,                           // RCURLY
-        S_SEMI = 20,                             // SEMI
-        S_YYACCEPT = 21,                         // $accept
-        S_program = 22,                          // program
-        S_scopes = 23,                           // scopes
-        S_scope = 24,                            // scope
-        S_stmts = 25,                            // stmts
-        S_stmt = 26,                             // stmt
-        S_expr = 27,                             // expr
-        S_addExpr = 28,                          // addExpr
-        S_mulExpr = 29,                          // mulExpr
-        S_factor = 30,                           // factor
-        S_varDecl = 31,                          // varDecl
-        S_type = 32,                             // type
-        S_varAss = 33                            // varAss
+        S_KWD_RETURN = 11,                       // KWD_RETURN
+        S_EQ_OP = 12,                            // EQ_OP
+        S_PLUS_OP = 13,                          // PLUS_OP
+        S_MINUS_OP = 14,                         // MINUS_OP
+        S_MUL_OP = 15,                           // MUL_OP
+        S_DIV_OP = 16,                           // DIV_OP
+        S_LPAREN = 17,                           // LPAREN
+        S_RPAREN = 18,                           // RPAREN
+        S_LCURLY = 19,                           // LCURLY
+        S_RCURLY = 20,                           // RCURLY
+        S_SEMI = 21,                             // SEMI
+        S_YYACCEPT = 22,                         // $accept
+        S_program = 23,                          // program
+        S_scopes = 24,                           // scopes
+        S_scope = 25,                            // scope
+        S_stmts = 26,                            // stmts
+        S_stmt = 27,                             // stmt
+        S_expr = 28,                             // expr
+        S_addExpr = 29,                          // addExpr
+        S_mulExpr = 30,                          // mulExpr
+        S_factor = 31,                           // factor
+        S_varDecl = 32,                          // varDecl
+        S_type = 33,                             // type
+        S_varAss = 34,                           // varAss
+        S_returnOp = 35                          // returnOp
       };
     };
 
@@ -802,9 +805,9 @@ namespace yy {
     /// Constants.
     enum
     {
-      yylast_ = 32,     ///< Last index in yytable_.
-      yynnts_ = 13,  ///< Number of nonterminal symbols.
-      yyfinal_ = 19 ///< Termination state number.
+      yylast_ = 35,     ///< Last index in yytable_.
+      yynnts_ = 14,  ///< Number of nonterminal symbols.
+      yyfinal_ = 21 ///< Termination state number.
     };
 
 
@@ -815,7 +818,7 @@ namespace yy {
 
 
 } // yy
-#line 819 "parser.hpp"
+#line 822 "parser.hpp"
 
 
 

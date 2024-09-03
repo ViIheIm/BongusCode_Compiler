@@ -328,6 +328,26 @@ namespace Body
 
 			break;
 		}
+		case Node_k::ReturnNode:
+		{
+			AST::ReturnNode* asReturnNode = (AST::ReturnNode*)node;
+
+			// The result of the expression we're about to evaluate is stored in rax by default,
+			// so we don't need to do anything more than ensure that the expression's code is generated.
+
+			code += "\n; Return expression:";
+
+			// Generate operation code. Remember that the temporaries stack section needs to be reset!
+			auto [t1, t1place] = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
+			GenOpNodeCode(code, asReturnNode->GetRetExpr(), t1, t1place);
+
+			// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
+			gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
+			// Enforce allocation policy(doing the aforementioned resetting).
+			CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+
+			break;
+		}
 		}
 	
 		for (AST::Node* child : node->GetChildren())

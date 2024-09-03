@@ -59,6 +59,8 @@
 %token KWD_UI64
 %token KWD_I64
 
+%token KWD_RETURN
+
 %token EQ_OP
 %token PLUS_OP
 %token MINUS_OP
@@ -83,6 +85,7 @@
 %type<ASTNode> expr
 %type<ASTNode> varDecl
 %type<ASTNode> varAss
+%type<ASTNode> returnOp
 
 %type<ASTNode> addExpr
 %type<ASTNode> mulExpr
@@ -110,6 +113,7 @@ stmts: stmts stmt SEMI				{ $$ = $1->MakeSiblings($2); }
 stmt: expr							{ $$ = $1; }
 	| varDecl						{ $$ = $1; }
 	| varAss						{ $$ = $1; }
+	| returnOp						{ $$ = $1; }
 	;
 
 
@@ -148,6 +152,12 @@ type: KWD_UI64						{ $$ = PrimitiveType::ui64; }
 varAss: ID EQ_OP expr				{ $$ = AST::MakeAssNode(AST::MakeSymNode($1) /* <--- Hurr durr */, $3); }
 	  ;
 //!Variable assignment ------------------------------------------------------------------------
+
+
+// Return operation ---------------------------------------------------------------------------
+returnOp: KWD_RETURN expr			{ $$ = AST::MakeReturnNode($2); }
+		;
+//!Return operation ---------------------------------------------------------------------------
 
 %%
 
