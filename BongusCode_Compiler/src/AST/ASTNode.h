@@ -15,7 +15,8 @@ enum class Node_k : ui16
 	OpNode,
 	AssNode,
 	ScopeNode,
-	DeclNode
+	DeclNode,
+	ReturnNode
 };
 
 namespace AST
@@ -44,6 +45,7 @@ namespace AST
 		virtual std::vector<Node*> GetChildren(void);
 
 		inline const Node_k GetNodeKind(void) const { return kind; }
+		inline const bool HasRightSiblings(void) const { return rSibling != nullptr; }
 
 		friend Node* MakeNullNode();
 		friend void DoForAllChildren(Node*, void(*)(Node*, void*), void*);
@@ -184,5 +186,23 @@ namespace AST
 		PrimitiveType t;
 		i16 size;
 		i16 scopeDepth;
+	};
+
+	// Represents a return operation.
+	class ReturnNode : public Node
+	{
+	public:
+
+		ReturnNode() = default;
+		virtual ~ReturnNode() override;
+		virtual std::vector<Node*> GetChildren(void) override;
+		inline Node* GetRetExpr(void) const { return retExpr; }
+		friend Node* MakeReturnNode(Node*);
+
+	private:
+
+		// Should always be an opnode, but this is enforced(warned about if it is not adhered to) in the makenode-function.
+		Node* retExpr;
+
 	};
 }

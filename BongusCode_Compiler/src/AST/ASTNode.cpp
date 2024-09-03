@@ -137,3 +137,21 @@ std::vector<AST::Node*> AST::AssNode::GetChildren(void)
 
     return res;
 }
+
+AST::ReturnNode::~ReturnNode()
+{
+    delete retExpr;
+}
+
+std::vector<AST::Node*> AST::ReturnNode::GetChildren(void)
+{
+    // Run base implementation first.
+    std::vector<Node*> res = Node::GetChildren();
+
+    if (retExpr != nullptr)
+    {
+        res.push_back(retExpr);
+    }
+
+    return res;
+}
