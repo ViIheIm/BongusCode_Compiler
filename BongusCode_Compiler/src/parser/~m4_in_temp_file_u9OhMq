@@ -1,0 +1,1895 @@
+m4_init()
+m4_define([b4_mergers], 
+[[]])
+
+m4_define([b4_symbol_numbers],
+[[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17], [18], [19], [20], [21], [22], [23], [24], [25], [26], [27]])
+
+m4_define([b4_type_names],
+[[0, 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+[17, 18, 19, 20, 21, 22, 23, 24, 25, 27],
+[4],
+[26],
+[3]])
+
+m4_define([b4_actions], 
+[b4_case(2, [b4_syncline(89, [["parser.y"]])dnl
+[                                                        { g_nodeHead = AST::MakeNullNode(); g_nodeHead->AdoptChildren(]b4_rhs_value(1, 1, orig 17, [])[); }]],
+[[program: scopes]])
+
+b4_case(3, [b4_syncline(92, [["parser.y"]])dnl
+[                                                { ]b4_lhs_value(orig 17, [])[ = ]b4_rhs_value(2, 1, orig 17, [])[->MakeSiblings(]b4_rhs_value(2, 2, orig 18, [])[); }]],
+[[scopes: scopes scope]])
+
+b4_case(4, [b4_syncline(93, [["parser.y"]])dnl
+[            { ]b4_lhs_value(orig 17, [])[ = ]b4_rhs_value(1, 1, orig 18, [])[; }]],
+[[scopes: scope]])
+
+b4_case(5, [b4_syncline(96, [["parser.y"]])dnl
+[                                                { ]b4_lhs_value(orig 18, [])[ = AST::MakeScopeNode(); ]b4_lhs_value(orig 18, [])[->AdoptChildren(]b4_rhs_value(3, 2, orig 19, [])[); }]],
+[[scope: LCURLY stmts RCURLY]])
+
+b4_case(6, [b4_syncline(99, [["parser.y"]])dnl
+[                                                { ]b4_lhs_value(orig 19, [])[ = ]b4_rhs_value(3, 1, orig 19, [])[->MakeSiblings(]b4_rhs_value(3, 2, orig 20, [])[); }]],
+[[stmts: stmts stmt SEMI]])
+
+b4_case(7, [b4_syncline(100, [["parser.y"]])dnl
+[                                                        { ]b4_lhs_value(orig 19, [])[ = ]b4_rhs_value(2, 1, orig 20, [])[; }]],
+[[stmts: stmt SEMI]])
+
+b4_case(8, [b4_syncline(103, [["parser.y"]])dnl
+[                                                                { ]b4_lhs_value(orig 20, [])[ = ]b4_rhs_value(1, 1, orig 21, [])[; }]],
+[[stmt: expr]])
+
+b4_case(9, [b4_syncline(104, [["parser.y"]])dnl
+[                                                                { ]b4_lhs_value(orig 20, [])[ = ]b4_rhs_value(1, 1, orig 25, [])[; }]],
+[[stmt: varDecl]])
+
+b4_case(10, [b4_syncline(105, [["parser.y"]])dnl
+[                                                                { ]b4_lhs_value(orig 20, [])[ = ]b4_rhs_value(1, 1, orig 27, [])[; }]],
+[[stmt: varAss]])
+
+b4_case(11, [b4_syncline(110, [["parser.y"]])dnl
+[                                                        { ]b4_lhs_value(orig 21, [])[ = ]b4_rhs_value(1, 1, orig 22, [])[; }]],
+[[expr: addExpr]])
+
+b4_case(12, [b4_syncline(113, [["parser.y"]])dnl
+[                                        { ]b4_lhs_value(orig 22, [])[ = AST::MakeOpNode(L'+', ]b4_rhs_value(3, 1, orig 22, [])[, ]b4_rhs_value(3, 3, orig 23, [])[); }]],
+[[addExpr: addExpr PLUS_OP mulExpr]])
+
+b4_case(13, [b4_syncline(114, [["parser.y"]])dnl
+[             { ]b4_lhs_value(orig 22, [])[ = ]b4_rhs_value(1, 1, orig 23, [])[; }]],
+[[addExpr: mulExpr]])
+
+b4_case(14, [b4_syncline(117, [["parser.y"]])dnl
+[                                        { ]b4_lhs_value(orig 23, [])[ = AST::MakeOpNode(L'*', ]b4_rhs_value(3, 1, orig 23, [])[, ]b4_rhs_value(3, 3, orig 24, [])[); }]],
+[[mulExpr: mulExpr MUL_OP factor]])
+
+b4_case(15, [b4_syncline(118, [["parser.y"]])dnl
+[             { ]b4_lhs_value(orig 23, [])[ = ]b4_rhs_value(1, 1, orig 24, [])[; }]],
+[[mulExpr: factor]])
+
+b4_case(16, [b4_syncline(121, [["parser.y"]])dnl
+[                                                        { ]b4_lhs_value(orig 24, [])[ = AST::MakeIntNode(]b4_rhs_value(1, 1, 4, [])[); }]],
+[[factor: NUM_LIT]])
+
+b4_case(17, [b4_syncline(122, [["parser.y"]])dnl
+[                                                                { ]b4_lhs_value(orig 24, [])[ = AST::MakeSymNode(]b4_rhs_value(1, 1, 3, [])[); }]],
+[[factor: ID]])
+
+b4_case(18, [b4_syncline(128, [["parser.y"]])dnl
+[                                                        { ]b4_lhs_value(orig 25, [])[ = AST::MakeDeclNode(]b4_rhs_value(2, 2, 3, [])[, ]b4_rhs_value(2, 1, orig 26, [])[); }]],
+[[varDecl: type ID]])
+
+b4_case(19, [b4_syncline(131, [["parser.y"]])dnl
+[                                                        { ]b4_lhs_value(orig 26, [])[ = PrimitiveType::ui8; }]],
+[[type: KWD_UI8]])
+
+b4_case(20, [b4_syncline(132, [["parser.y"]])dnl
+[                                                                { ]b4_lhs_value(orig 26, [])[ = PrimitiveType::i8; }]],
+[[type: KWD_I8]])
+
+b4_case(21, [b4_syncline(138, [["parser.y"]])dnl
+[                                                { ]b4_lhs_value(orig 27, [])[ = AST::MakeAssNode(AST::MakeSymNode(]b4_rhs_value(3, 1, 3, [])[) /* <--- Hurr durr */, ]b4_rhs_value(3, 3, orig 21, [])[); }]],
+[[varAss: ID EQ_OP expr]])
+
+])
+
+m4_define([b4_percent_code_user_qualifiers],
+[[[[[[requires]], [[parser.y:6.7@@7]], [[parser.y:6.15@@15]]]]]])
+
+
+m4_define([b4_symbol(27, type)],
+[[ASTNode]])
+
+
+m4_define([b4_symbol(25, id)],
+[[varDecl]])
+
+
+m4_define([b4_symbol(16, type)],
+[[]])
+
+
+m4_define([b4_symbol(6, type)],
+[[]])
+
+
+m4_define([b4_skeletonsdir],
+[[C:\Users\Vilhelm\Desktop\GNU_Bison\WinFlexBison\data/skeletons]])
+
+
+m4_define([b4_translate],
+[[     0,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
+       5,     6,     7,     8,     9,    10,    11,    12,    13,    14]])
+
+
+m4_define([b4_symbol(3, is_token)],
+[[1]])
+
+
+m4_define([b4_use_push_for_pull_flag],
+[[0]])
+
+
+m4_define([b4_symbol(12, is_token)],
+[[1]])
+
+
+m4_define([b4_symbol(22, is_token)],
+[[0]])
+
+
+m4_define([b4_symbol(4, has_type)],
+[[1]])
+
+
+m4_define([b4_symbol(8, has_printer)],
+[[0]])
+
+
+m4_define([b4_pact_ninf],
+[[-5]])
+
+
+m4_define([b4_symbol(17, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(13, has_type)],
+[[0]])
+
+
+m4_define([b4_symbol(23, has_type)],
+[[1]])
+
+
+m4_define([b4_symbol(27, has_printer)],
+[[0]])
+
+
+m4_define([b4_conflict_list_heads],
+[[     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0]])
+
+
+m4_define([b4_symbol(0, tag)],
+[["end of file"]])
+
+
+m4_define([b4_symbol(1, tag)],
+[[error]])
+
+
+m4_define([b4_symbol(2, tag)],
+[["invalid token"]])
+
+
+m4_define([b4_symbol(3, tag)],
+[[ID]])
+
+
+m4_define([b4_symbol(20, number)],
+[[20]])
+
+
+m4_define([b4_percent_define_how(parse.trace)],
+[[2]])
+
+
+m4_define([b4_symbol(21, number)],
+[[21]])
+
+
+m4_define([b4_symbol(4, tag)],
+[[NUM_LIT]])
+
+
+m4_define([b4_symbol(5, tag)],
+[[KWD_UI8]])
+
+
+m4_define([b4_symbol(22, number)],
+[[22]])
+
+
+m4_define([b4_toknum_max],
+[[269]])
+
+
+m4_define([b4_symbol(23, number)],
+[[23]])
+
+
+m4_define([b4_symbol(6, tag)],
+[[KWD_I8]])
+
+
+m4_define([b4_rhs],
+[[    16,     0,    -1,    17,    -1,    17,    18,    -1,    18,    -1,
+      12,    19,    13,    -1,    19,    20,    14,    -1,    20,    14,
+      -1,    21,    -1,    25,    -1,    27,    -1,    22,    -1,    22,
+       8,    23,    -1,    23,    -1,    23,     9,    24,    -1,    24,
+      -1,     4,    -1,     3,    -1,    26,     3,    -1,     5,    -1,
+       6,    -1,     3,     7,    21,    -1]])
+
+
+m4_define([b4_last],
+[[27]])
+
+
+m4_define([b4_symbol(24, number)],
+[[24]])
+
+
+m4_define([b4_symbol(22, code)],
+[[-1]])
+
+
+m4_define([b4_symbol(7, tag)],
+[[EQ_OP]])
+
+
+m4_define([b4_symbol(8, tag)],
+[[PLUS_OP]])
+
+
+m4_define([b4_symbol(25, number)],
+[[25]])
+
+
+m4_define([b4_symbol(11, code)],
+[[266]])
+
+
+m4_define([b4_stos_min],
+[[0]])
+
+
+m4_define([b4_symbol(26, number)],
+[[26]])
+
+
+m4_define([b4_symbol(9, tag)],
+[[MUL_OP]])
+
+
+m4_define([b4_symbol(1, code)],
+[[256]])
+
+
+m4_define([b4_symbol(27, number)],
+[[27]])
+
+
+m4_define([b4_tag_seen_flag],
+[[1]])
+
+
+m4_define([b4_percent_define(parse.trace)],
+[[]])
+
+
+m4_define([b4_token_table_flag],
+[[0]])
+
+
+m4_define([b4_parser_file_name],
+[[parser.cpp]])
+
+
+m4_define([b4_percent_define_bison_variables(lr.default-reduction)],
+[[]])
+
+
+m4_define([b4_symbol(5, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(5, id)],
+[[KWD_UI8]])
+
+
+m4_define([b4_symbol(14, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(14, id)],
+[[SEMI]])
+
+
+m4_define([b4_symbol(24, has_destructor)],
+[[0]])
+
+
+m4_define([b4_immediate],
+[[     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0]])
+
+
+m4_define([b4_symbol(24, id)],
+[[factor]])
+
+
+m4_define([b4_symbol(17, type)],
+[[ASTNode]])
+
+
+m4_define([b4_percent_code()],
+[[]b4_syncline(29, [["parser.y"]])dnl
+[
+	#include <stdio.h>
+	#include "../lexer/lexer.h"
+	#include "../AST/ASTNode.h"
+	#include "../AST/ASTAPI.h"
+	#include "../BongusTable.h"
+
+	#undef yylex
+	#define yylex lexer.lex  // Within bison's parse() we should invoke lexer.lex(), not the global yylex()
+
+	// Jank-ass temp global to store the head. TODO: Please fix.
+	extern AST::Node* g_nodeHead;
+]])
+
+
+m4_define([b4_symbol(7, type)],
+[[]])
+
+
+m4_define([b4_table_min],
+[[0]])
+
+
+m4_define([b4_table],
+[[     5,     6,     7,     8,     5,     6,     7,     8,    27,     6,
+      21,     1,    18,    20,    23,    24,    26,    25,    29,    19,
+      22,    31,    28,     0,     0,     0,     0,    30]])
+
+
+m4_define([b4_conflicting_rules_max],
+[[0]])
+
+
+m4_define([b4_merger],
+[[     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0]])
+
+
+m4_define([b4_glr_flag],
+[[0]])
+
+
+m4_define([b4_symbol(2, is_token)],
+[[1]])
+
+
+m4_define([b4_symbol(11, is_token)],
+[[1]])
+
+
+m4_define([b4_check_max],
+[[25]])
+
+
+m4_define([b4_symbol(21, is_token)],
+[[0]])
+
+
+m4_define([b4_symbol(3, has_type)],
+[[1]])
+
+
+m4_define([b4_symbol(7, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(12, has_type)],
+[[0]])
+
+
+m4_define([b4_symbol(16, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(22, has_type)],
+[[1]])
+
+
+m4_define([b4_symbol(26, has_printer)],
+[[0]])
+
+
+m4_define([b4_spec_graph_file],
+[[]])
+
+
+m4_define([b4_symbol(10, tag)],
+[[LPAREN]])
+
+
+m4_define([b4_symbol(11, tag)],
+[[RPAREN]])
+
+
+m4_define([b4_rline_min],
+[[0]])
+
+
+m4_define([b4_symbol(12, tag)],
+[[LCURLY]])
+
+
+m4_define([b4_symbol(13, tag)],
+[[RCURLY]])
+
+
+m4_define([b4_toknum],
+[[     0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
+     265,   266,   267,   268,   269]])
+
+
+m4_define([b4_symbol(14, tag)],
+[[SEMI]])
+
+
+m4_define([b4_symbol(15, tag)],
+[[$][accept]])
+
+
+m4_define([b4_symbol(16, tag)],
+[[program]])
+
+
+m4_define([b4_symbol(23, code)],
+[[-1]])
+
+
+m4_define([b4_symbol(12, code)],
+[[267]])
+
+
+m4_define([b4_symbol(17, tag)],
+[[scopes]])
+
+
+m4_define([b4_defgoto_max],
+[[17]])
+
+
+m4_define([b4_symbol(18, tag)],
+[[scope]])
+
+
+m4_define([b4_symbol(2, code)],
+[[257]])
+
+
+m4_define([b4_symbol(19, tag)],
+[[stmts]])
+
+
+m4_define([b4_symbol(4, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(4, id)],
+[[NUM_LIT]])
+
+
+m4_define([b4_symbol(13, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(13, id)],
+[[RCURLY]])
+
+
+m4_define([b4_symbol(23, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(18, type)],
+[[ASTNode]])
+
+
+m4_define([b4_immediate_max],
+[[0]])
+
+
+m4_define([b4_version],
+[[30704]])
+
+
+m4_define([b4_symbol(23, id)],
+[[mulExpr]])
+
+
+m4_define([b4_symbol(8, type)],
+[[]])
+
+
+m4_define([b4_translate_min],
+[[0]])
+
+
+m4_define([b4_percent_define_loc(parse.trace)],
+[[[[parser.y:26.1@@1]], [[parser.y:26.20@@20]]]])
+
+
+m4_define([b4_symbol(1, is_token)],
+[[1]])
+
+
+m4_define([b4_symbol(10, is_token)],
+[[1]])
+
+
+m4_define([b4_percent_define(lr.default-reduction)],
+[[most]])
+
+
+m4_define([b4_symbol(20, is_token)],
+[[0]])
+
+
+m4_define([b4_symbol(2, has_type)],
+[[0]])
+
+
+m4_define([b4_symbol(6, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(11, has_type)],
+[[0]])
+
+
+m4_define([b4_symbol(15, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(21, has_type)],
+[[1]])
+
+
+m4_define([b4_symbol(25, has_printer)],
+[[0]])
+
+
+m4_define([b4_percent_define_loc(locations)],
+[[[[parser.y:22.1@@1]], [[parser.y:22.11@@11]]]])
+
+
+m4_define([b4_symbol(20, tag)],
+[[stmt]])
+
+
+m4_define([b4_symbol(21, tag)],
+[[expr]])
+
+
+m4_define([b4_symbol(22, tag)],
+[[addExpr]])
+
+
+m4_define([b4_symbol(23, tag)],
+[[mulExpr]])
+
+
+m4_define([b4_pgoto_min],
+[[-5]])
+
+
+m4_define([b4_symbol(24, tag)],
+[[factor]])
+
+
+m4_define([b4_symbol(25, tag)],
+[[varDecl]])
+
+
+m4_define([b4_rhs_max],
+[[27]])
+
+
+m4_define([b4_symbol(26, tag)],
+[[type]])
+
+
+m4_define([b4_symbol(24, code)],
+[[-1]])
+
+
+m4_define([b4_symbol(13, code)],
+[[268]])
+
+
+m4_define([b4_symbol(27, tag)],
+[[varAss]])
+
+
+m4_define([b4_symbol(3, code)],
+[[258]])
+
+
+m4_define([b4_skeleton],
+[["lalr1.cc"]])
+
+
+m4_define([b4_percent_define_kind(lr.type)],
+[[keyword]])
+
+
+m4_define([b4_pgoto],
+[[    -5,    -5,    -5,    16,    -5,    11,     2,    -5,     3,    -4,
+      -5,    -5,    -5]])
+
+
+m4_define([b4_pact_max],
+[[13]])
+
+
+m4_define([b4_yacc_flag],
+[[0]])
+
+
+m4_define([b4_percent_define_kind(parse.trace)],
+[[keyword]])
+
+
+m4_define([b4_spec_verbose_file],
+[[]])
+
+
+m4_define([b4_symbol(3, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(3, id)],
+[[ID]])
+
+
+m4_define([b4_symbol(19, type)],
+[[ASTNode]])
+
+
+m4_define([b4_symbol(12, has_destructor)],
+[[0]])
+
+
+m4_define([b4_has_translations_flag],
+[[0]])
+
+
+m4_define([b4_symbol(22, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(12, id)],
+[[LCURLY]])
+
+
+m4_define([b4_symbol(9, type)],
+[[]])
+
+
+m4_define([b4_symbol(22, id)],
+[[addExpr]])
+
+
+m4_define([b4_mapped_dir_prefix],
+[[]])
+
+
+m4_define([b4_symbol(0, is_token)],
+[[1]])
+
+
+m4_define([b4_percent_define_kind(lr.keep-unreachable-state)],
+[[keyword]])
+
+
+m4_define([b4_symbol(1, has_type)],
+[[0]])
+
+
+m4_define([b4_symbol(5, has_printer)],
+[[0]])
+
+
+m4_define([b4_conflict_list_heads_min],
+[[0]])
+
+
+m4_define([b4_symbol(14, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(10, has_type)],
+[[0]])
+
+
+m4_define([b4_symbol(20, has_type)],
+[[1]])
+
+
+m4_define([b4_symbol(24, has_printer)],
+[[0]])
+
+
+m4_define([b4_spec_mapped_header_file],
+[[parser.hpp]])
+
+
+m4_define([b4_tname],
+[["\"end of file\"", "error", "\"invalid token\"", "ID", "NUM_LIT",
+  "KWD_UI8", "KWD_I8", "EQ_OP", "PLUS_OP", "MUL_OP", "LPAREN", "RPAREN",
+  "LCURLY", "RCURLY", "SEMI", "$][accept", "program", "scopes", "scope",
+  "stmts", "stmt", "expr", "addExpr", "mulExpr", "factor", "varDecl",
+  "type", "varAss", ]b4_null[]])
+
+
+m4_define([b4_percent_define_loc(lr.default-reduction)],
+[[[[<default value>:-1.-1@@-1]], [[<default value>:-1.-1@@-1]]]])
+
+
+m4_define([b4_defact],
+[[     0,     0,     0,     2,     4,    17,    16,    19,    20,     0,
+       0,     8,    11,    13,    15,     9,     0,    10,     1,     3,
+       0,     5,     0,     7,     0,     0,    18,    17,    21,     6,
+      12,    14]])
+
+
+m4_define([b4_symbol(20, type)],
+[[ASTNode]])
+
+
+m4_define([b4_symbol(19, is_token)],
+[[0]])
+
+
+m4_define([b4_tokens_number],
+[[15]])
+
+
+m4_define([b4_symbol(25, code)],
+[[-1]])
+
+
+m4_define([b4_symbol(14, code)],
+[[269]])
+
+
+m4_define([b4_stos_max],
+[[27]])
+
+
+m4_define([b4_symbol(4, code)],
+[[259]])
+
+
+m4_define([b4_percent_define_user_variables],
+[[[[[[locations]], [[parser.y:22.1@@1]], [[parser.y:22.11@@11]]]],[[[[parse.trace]], [[parser.y:26.1@@1]], [[parser.y:26.20@@20]]]]]])
+
+
+m4_define([b4_symbol(2, has_destructor)],
+[[0]])
+
+
+m4_define([b4_merger_min],
+[[0]])
+
+
+m4_define([b4_symbol(11, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(2, id)],
+[[YYUNDEF]])
+
+
+m4_define([b4_table_max],
+[[31]])
+
+
+m4_define([b4_symbol(11, id)],
+[[RPAREN]])
+
+
+m4_define([b4_symbol(21, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(21, id)],
+[[expr]])
+
+
+m4_define([b4_spec_name_prefix],
+[[]])
+
+
+m4_define([b4_epilogue],
+[[]b4_syncline(142, [["parser.y"]])dnl
+[
+
+
+void yy::parser::error(const location_type& loc, const std::string& msg)
+{
+	std::cerr << "SYNTAX ERROR: " << msg << " at " << loc << std::endl;
+}
+]])
+
+
+m4_define([b4_table_ninf],
+[[-1]])
+
+
+m4_define([b4_prhs],
+[[     0,     0,     3,     5,     8,    10,    14,    18,    21,    23,
+      25,    27,    29,    33,    35,    39,    41,    43,    45,    48,
+      50,    52]])
+
+
+m4_define([b4_percent_define_kind(lr.default-reduction)],
+[[keyword]])
+
+
+m4_define([b4_symbol(4, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(0, has_type)],
+[[0]])
+
+
+m4_define([b4_check],
+[[     3,     4,     5,     6,     3,     4,     5,     6,     3,     4,
+      13,    12,     0,     7,    14,     8,     3,     9,    14,     3,
+       9,    25,    20,    -1,    -1,    -1,    -1,    24]])
+
+
+m4_define([b4_symbol(13, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(23, has_printer)],
+[[0]])
+
+
+m4_define([b4_nterms_number],
+[[13]])
+
+
+m4_define([b4_rline_max],
+[[138]])
+
+
+m4_define([b4_symbol(9, is_token)],
+[[1]])
+
+
+m4_define([b4_symbol(21, type)],
+[[ASTNode]])
+
+
+m4_define([b4_dprec],
+[[     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0]])
+
+
+m4_define([b4_symbol(18, is_token)],
+[[0]])
+
+
+m4_define([b4_symbol(10, type)],
+[[]])
+
+
+m4_define([b4_symbol(0, type)],
+[[]])
+
+
+m4_define([b4_symbol(26, code)],
+[[-1]])
+
+
+m4_define([b4_symbol(15, code)],
+[[-1]])
+
+
+m4_define([b4_symbol(5, code)],
+[[260]])
+
+
+m4_define([b4_symbol(19, has_type)],
+[[1]])
+
+
+m4_define([b4_rline],
+[[     0,    89,    89,    92,    93,    96,    99,   100,   103,   104,
+     105,   110,   113,   114,   117,   118,   121,   122,   128,   131,
+     132,   138]])
+
+
+m4_define([b4_prhs_min],
+[[0]])
+
+
+m4_define([b4_spec_outfile],
+[[parser.cpp]])
+
+
+m4_define([b4_symbol_names],
+[["end of file", "error", "invalid token", "ID", "NUM_LIT", "KWD_UI8",
+  "KWD_I8", "EQ_OP", "PLUS_OP", "MUL_OP", "LPAREN", "RPAREN", "LCURLY",
+  "RCURLY", "SEMI", "$][accept", "program", "scopes", "scope", "stmts",
+  "stmt", "expr", "addExpr", "mulExpr", "factor", "varDecl", "type",
+  "varAss", ]b4_null[]])
+
+
+m4_define([b4_symbol(1, has_destructor)],
+[[0]])
+
+
+m4_define([b4_translate_max],
+[[14]])
+
+
+m4_define([b4_symbol(10, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(1, id)],
+[[YYerror]])
+
+
+m4_define([b4_union_members],
+[[]b4_syncline(44, [["parser.y"]])dnl
+[
+	int num;
+	// const wchar_t* str;
+	std::wstring* str;
+	AST::Node* ASTNode;
+	PrimitiveType primtype;
+]])
+
+
+m4_define([b4_symbol(20, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(10, id)],
+[[LPAREN]])
+
+
+m4_define([b4_r1_min],
+[[0]])
+
+
+m4_define([b4_symbol(20, id)],
+[[stmt]])
+
+
+m4_define([b4_max_left_semantic_context],
+[[0]])
+
+
+m4_define([b4_symbol(3, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(12, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(22, has_printer)],
+[[0]])
+
+
+m4_define([b4_pgoto_max],
+[[16]])
+
+
+m4_define([b4_symbol(22, type)],
+[[ASTNode]])
+
+
+m4_define([b4_symbol(8, is_token)],
+[[1]])
+
+
+m4_define([b4_symbol(11, type)],
+[[]])
+
+
+m4_define([b4_rules_number],
+[[21]])
+
+
+m4_define([b4_symbol(27, code)],
+[[-1]])
+
+
+m4_define([b4_symbol(17, is_token)],
+[[0]])
+
+
+m4_define([b4_symbol(1, type)],
+[[]])
+
+
+m4_define([b4_symbol(16, code)],
+[[-1]])
+
+
+m4_define([b4_symbol(27, is_token)],
+[[0]])
+
+
+m4_define([b4_symbol(6, code)],
+[[261]])
+
+
+m4_define([b4_file_name_all_but_ext],
+[[parser]])
+
+
+m4_define([b4_symbol(9, has_type)],
+[[0]])
+
+
+m4_define([b4_symbol(18, has_type)],
+[[1]])
+
+
+m4_define([b4_percent_code(requires)],
+[[]b4_syncline(7, [["parser.y"]])dnl
+[
+	namespace yy
+	{
+		class Lexer;
+	}
+
+	namespace AST
+	{
+		class Node;
+	}
+
+	enum class PrimitiveType : unsigned short;
+]])
+
+
+m4_define([b4_percent_define(lr.type)],
+[[lalr]])
+
+
+m4_define([b4_symbol(0, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(0, id)],
+[[YYEOF]])
+
+
+m4_define([b4_r2_min],
+[[0]])
+
+
+m4_define([b4_pact],
+[[    -1,     1,    12,    -1,    -5,     6,    -5,    -5,    -5,    -3,
+       0,    -5,     7,     8,    -5,    -5,    13,    -5,    -5,    -5,
+       5,    -5,     4,    -5,     5,     5,    -5,    -5,    -5,    -5,
+       8,    -5]])
+
+
+m4_define([b4_percent_define(locations)],
+[[]])
+
+
+m4_define([b4_dprec_min],
+[[0]])
+
+
+m4_define([b4_defact_min],
+[[0]])
+
+
+m4_define([b4_code_max],
+[[269]])
+
+
+m4_define([b4_percent_define(lr.keep-unreachable-state)],
+[[false]])
+
+
+m4_define([b4_synclines_flag],
+[[1]])
+
+
+m4_define([b4_nondeterministic_flag],
+[[0]])
+
+
+m4_define([b4_defines_flag],
+[[1]])
+
+
+m4_define([b4_percent_define_syncline(parse.trace)],
+[[]b4_syncline(26, [["parser.y"]])dnl
+[]])
+
+
+m4_define([b4_conflict_list_heads_max],
+[[0]])
+
+
+m4_define([b4_dir_prefix],
+[[]])
+
+
+m4_define([b4_symbol(2, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(19, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(11, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(19, id)],
+[[stmts]])
+
+
+m4_define([b4_symbol(21, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(23, type)],
+[[ASTNode]])
+
+
+m4_define([b4_symbol(12, type)],
+[[]])
+
+
+m4_define([b4_symbol(2, type)],
+[[]])
+
+
+m4_define([b4_symbol(7, is_token)],
+[[1]])
+
+
+m4_define([b4_symbol(16, is_token)],
+[[0]])
+
+
+m4_define([b4_symbol(17, code)],
+[[-1]])
+
+
+m4_define([b4_symbol(0, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(26, is_token)],
+[[0]])
+
+
+m4_define([b4_symbol(7, code)],
+[[262]])
+
+
+m4_define([b4_symbol(1, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(8, has_type)],
+[[0]])
+
+
+m4_define([b4_symbol(2, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(17, has_type)],
+[[1]])
+
+
+m4_define([b4_symbol(3, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(27, has_type)],
+[[1]])
+
+
+m4_define([b4_symbol(4, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(5, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(6, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(7, has_id)],
+[[1]])
+
+
+m4_define([b4_merger_max],
+[[0]])
+
+
+m4_define([b4_symbol(8, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(9, has_id)],
+[[1]])
+
+
+m4_define([b4_percent_define_kind(locations)],
+[[keyword]])
+
+
+m4_define([b4_percent_define_syncline(locations)],
+[[]b4_syncline(22, [["parser.y"]])dnl
+[]])
+
+
+m4_define([b4_symbol(9, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(1, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(18, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(9, id)],
+[[MUL_OP]])
+
+
+m4_define([b4_symbol(10, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(18, id)],
+[[scope]])
+
+
+m4_define([b4_percent_define_bison_variables(lr.type)],
+[[]])
+
+
+m4_define([b4_symbol(20, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbols_number],
+[[28]])
+
+
+m4_define([b4_symbol(24, type)],
+[[ASTNode]])
+
+
+m4_define([b4_symbol(13, type)],
+[[]])
+
+
+m4_define([b4_symbol(3, type)],
+[[str]])
+
+
+m4_define([b4_symbol(6, is_token)],
+[[1]])
+
+
+m4_define([b4_symbol(18, code)],
+[[-1]])
+
+
+m4_define([b4_symbol(8, code)],
+[[263]])
+
+
+m4_define([b4_symbol(15, is_token)],
+[[0]])
+
+
+m4_define([b4_symbol(10, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(25, is_token)],
+[[0]])
+
+
+m4_define([b4_percent_define_syncline(lr.default-reduction)],
+[[]])
+
+
+m4_define([b4_symbol(11, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(7, has_type)],
+[[0]])
+
+
+m4_define([b4_symbol(12, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(16, has_type)],
+[[0]])
+
+
+m4_define([b4_symbol(13, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(26, has_type)],
+[[1]])
+
+
+m4_define([b4_prhs_max],
+[[52]])
+
+
+m4_define([b4_symbol(14, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(15, has_id)],
+[[0]])
+
+
+m4_define([b4_symbol(16, has_id)],
+[[1]])
+
+
+m4_define([b4_percent_define_bison_variables(lr.keep-unreachable-state)],
+[[]])
+
+
+m4_define([b4_symbol(17, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(18, has_id)],
+[[1]])
+
+
+m4_define([b4_spec_file_prefix],
+[[]])
+
+
+m4_define([b4_symbol(19, has_id)],
+[[1]])
+
+
+m4_define([b4_r1_max],
+[[27]])
+
+
+m4_define([b4_required_version],
+[[30000]])
+
+
+m4_define([b4_percent_define_loc(lr.type)],
+[[[[<default value>:-1.-1@@-1]], [[<default value>:-1.-1@@-1]]]])
+
+
+m4_define([b4_toknum_min],
+[[0]])
+
+
+m4_define([b4_symbol(8, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(0, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(17, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(8, id)],
+[[PLUS_OP]])
+
+
+m4_define([b4_symbol(17, id)],
+[[scopes]])
+
+
+m4_define([b4_symbol(27, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(27, id)],
+[[varAss]])
+
+
+m4_define([b4_symbol(25, type)],
+[[ASTNode]])
+
+
+m4_define([b4_symbol(14, type)],
+[[]])
+
+
+m4_define([b4_symbol(4, type)],
+[[num]])
+
+
+m4_define([b4_conflicting_rules_min],
+[[0]])
+
+
+m4_define([b4_symbol(19, code)],
+[[-1]])
+
+
+m4_define([b4_r1],
+[[     0,    15,    16,    17,    17,    18,    19,    19,    20,    20,
+      20,    21,    22,    22,    23,    23,    24,    24,    25,    26,
+      26,    27]])
+
+
+m4_define([b4_symbol(9, code)],
+[[264]])
+
+
+m4_define([b4_symbol(5, is_token)],
+[[1]])
+
+
+m4_define([b4_parse_param],
+[[[[[yy::Lexer& lexer]], [[lexer]]]]])
+
+
+m4_define([b4_symbol(20, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(14, is_token)],
+[[1]])
+
+
+m4_define([b4_r2],
+[[     0,     2,     1,     2,     1,     3,     3,     2,     1,     1,
+       1,     1,     3,     1,     3,     1,     1,     1,     2,     1,
+       1,     3]])
+
+
+m4_define([b4_percent_define_loc(lr.keep-unreachable-state)],
+[[[[<default value>:-1.-1@@-1]], [[<default value>:-1.-1@@-1]]]])
+
+
+m4_define([b4_symbol(21, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(24, is_token)],
+[[0]])
+
+
+m4_define([b4_symbol(6, has_type)],
+[[0]])
+
+
+m4_define([b4_version_string],
+[[3.7.4]])
+
+
+m4_define([b4_symbol(22, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(orig 15, number)],
+[[15]])
+
+
+m4_define([b4_symbol(23, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(19, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(15, has_type)],
+[[0]])
+
+
+m4_define([b4_check_min],
+[[-1]])
+
+
+m4_define([b4_symbol(25, has_type)],
+[[1]])
+
+
+m4_define([b4_symbol(24, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(orig 16, number)],
+[[16]])
+
+
+m4_define([b4_states_number],
+[[32]])
+
+
+m4_define([b4_symbol(25, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(orig 17, number)],
+[[17]])
+
+
+m4_define([b4_symbol(orig 18, number)],
+[[18]])
+
+
+m4_define([b4_symbol(26, has_id)],
+[[1]])
+
+
+m4_define([b4_symbol(orig 19, number)],
+[[19]])
+
+
+m4_define([b4_symbol(27, has_id)],
+[[1]])
+
+
+m4_define([b4_r2_max],
+[[3]])
+
+
+m4_define([b4_symbol(0, number)],
+[[0]])
+
+
+m4_define([b4_dprec_max],
+[[0]])
+
+
+m4_define([b4_symbol(1, number)],
+[[1]])
+
+
+m4_define([b4_defgoto],
+[[    -1,     2,     3,     4,     9,    10,    11,    12,    13,    14,
+      15,    16,    17]])
+
+
+m4_define([b4_defact_max],
+[[21]])
+
+
+m4_define([b4_symbol(2, number)],
+[[2]])
+
+
+m4_define([b4_stos],
+[[     0,    12,    16,    17,    18,     3,     4,     5,     6,    19,
+      20,    21,    22,    23,    24,    25,    26,    27,     0,    18,
+       7,    13,    20,    14,     8,     9,     3,     3,    21,    14,
+      23,    24]])
+
+
+m4_define([b4_symbol(3, number)],
+[[3]])
+
+
+m4_define([b4_symbol(4, number)],
+[[4]])
+
+
+m4_define([b4_final_state_number],
+[[18]])
+
+
+m4_define([b4_symbol(20, code)],
+[[-1]])
+
+
+m4_define([b4_symbol(5, number)],
+[[5]])
+
+
+m4_define([b4_symbol(6, number)],
+[[6]])
+
+
+m4_define([b4_spec_header_file],
+[[parser.hpp]])
+
+
+m4_define([b4_defgoto_min],
+[[-1]])
+
+
+m4_define([b4_symbol(7, number)],
+[[7]])
+
+
+m4_define([b4_symbol(8, number)],
+[[8]])
+
+
+m4_define([b4_symbol(7, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(9, number)],
+[[9]])
+
+
+m4_define([b4_symbol(7, id)],
+[[EQ_OP]])
+
+
+m4_define([b4_symbol(16, has_destructor)],
+[[0]])
+
+
+m4_define([b4_file_name],
+[["parser.y"]])
+
+
+m4_define([b4_symbol(26, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(16, id)],
+[[program]])
+
+
+m4_define([b4_symbol(26, id)],
+[[type]])
+
+
+m4_define([b4_symbol(26, type)],
+[[primtype]])
+
+
+m4_define([b4_symbol(15, type)],
+[[]])
+
+
+m4_define([b4_immediate_min],
+[[0]])
+
+
+m4_define([b4_symbol(5, type)],
+[[]])
+
+
+m4_define([b4_symbol(orig 20, number)],
+[[20]])
+
+
+m4_define([b4_symbol(orig 21, number)],
+[[21]])
+
+
+m4_define([b4_symbol(orig 22, number)],
+[[22]])
+
+
+m4_define([b4_symbol(4, is_token)],
+[[1]])
+
+
+m4_define([b4_percent_define_syncline(lr.type)],
+[[]])
+
+
+m4_define([b4_symbol(13, is_token)],
+[[1]])
+
+
+m4_define([b4_symbol(orig 23, number)],
+[[23]])
+
+
+m4_define([b4_symbol(orig 24, number)],
+[[24]])
+
+
+m4_define([b4_symbol(23, is_token)],
+[[0]])
+
+
+m4_define([b4_percent_define_how(locations)],
+[[2]])
+
+
+m4_define([b4_symbol(9, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(5, has_type)],
+[[0]])
+
+
+m4_define([b4_symbol(orig 25, number)],
+[[25]])
+
+
+m4_define([b4_symbol(orig 26, number)],
+[[26]])
+
+
+m4_define([b4_symbol(18, has_printer)],
+[[0]])
+
+
+m4_define([b4_symbol(14, has_type)],
+[[0]])
+
+
+m4_define([b4_symbol(orig 27, number)],
+[[27]])
+
+
+m4_define([b4_symbol(24, has_type)],
+[[1]])
+
+
+m4_define([b4_symbol(10, number)],
+[[10]])
+
+
+m4_define([b4_symbol(11, number)],
+[[11]])
+
+
+m4_define([b4_percent_define_syncline(lr.keep-unreachable-state)],
+[[]])
+
+
+m4_define([b4_symbol(12, number)],
+[[12]])
+
+
+m4_define([b4_symbol(13, number)],
+[[13]])
+
+
+m4_define([b4_rhs_min],
+[[-1]])
+
+
+m4_define([b4_symbol(21, code)],
+[[-1]])
+
+
+m4_define([b4_symbol(14, number)],
+[[14]])
+
+
+m4_define([b4_symbol(10, code)],
+[[265]])
+
+
+m4_define([b4_symbol(15, number)],
+[[15]])
+
+
+m4_define([b4_symbol(0, code)],
+[[0]])
+
+
+m4_define([b4_symbol(16, number)],
+[[16]])
+
+
+m4_define([b4_symbol(17, number)],
+[[17]])
+
+
+m4_define([b4_symbol(18, number)],
+[[18]])
+
+
+m4_define([b4_pact_min],
+[[-5]])
+
+
+m4_define([b4_symbol(19, number)],
+[[19]])
+
+
+m4_define([b4_symbol(6, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(6, id)],
+[[KWD_I8]])
+
+
+m4_define([b4_symbol(15, has_destructor)],
+[[0]])
+
+
+m4_define([b4_conflicting_rules],
+[[     0]])
+
+
+m4_define([b4_symbol(25, has_destructor)],
+[[0]])
+
+
+m4_define([b4_symbol(15, id)],
+[[]])
+
+

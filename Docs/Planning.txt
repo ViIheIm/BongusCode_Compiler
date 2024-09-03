@@ -1,0 +1,19 @@
+
+
+⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘
+⫸ Call-site inlining:
+Research the idea of asking the compiler to inline a function, but at the callsite.
+Example:
+
+Nihil Add(i32 a, i32 b)
+{
+  Claudere a + b.
+}
+
+i32 main(Nihil)
+{
+  i32 a = inlineplz? Add(3, 4).
+
+  Claudere a.
+}
+⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘⫘

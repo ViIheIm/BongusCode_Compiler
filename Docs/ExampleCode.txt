@@ -1,0 +1,38 @@
+
+i32 Doubler(i32 i).
+
+|| Main function. Nothing special.
+i32 main(Nihil)
+{
+
+  || Allocate string on the heap, for no reason at all other than demonstrating this language.
+  i8 str = i8(Vocare(12)).
+  str[0] = 'H'.
+  str[1] = 'e'.
+  str[2] = 'l'.
+  str[3] = 'l'.
+  str[4] = 'o'.
+  str[5] = ' '.
+  str[6] = 'W'.
+  str[7] = 'o'.
+  str[8] = 'r'.
+  str[9] = 'l'.
+  str[10] = 'd'.
+  str[11] = 0.
+
+  print(str).
+
+  || Be curteous and free the string.
+  Perdere(str).
+
+  || Important to highlight the unicode functionality for identifiers.
+  i32 Σ = 10.
+
+  Claudere Doubler(7) + Σ.
+}
+
+
+i32 Doubler(i32 i)
+{
+  Claudere i * 2.
+}

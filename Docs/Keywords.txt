@@ -1,0 +1,39 @@
+
+
+Symposium:
+Just a struct, like in C++. This was also the first keyword I ever decided to include in this language.
+
+
+Oblivie(forget):
+
+
+Misericordia(pity):
+
+
+Nihil:
+Just like void in C++.
+
+
+Ordinata(array):
+
+
+Colludium(game):
+
+
+Claudere(close):
+Just the return keyword.
+
+
+Vocare(summon):
+Should probably be the equivalent to malloc(). This should be a separate function though.
+
+
+Perdere(destroy):
+Should probably be the equivalent to free(). Should also be a function.
+
+
+Acatalectica(verse in which no syllable is wanting in the last foot).
+
+
+Viviscere(To live):
+Main function name.
