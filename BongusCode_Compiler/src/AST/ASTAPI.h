@@ -11,6 +11,7 @@ namespace AST
 {
 
 	class Node;
+	class OpNode;
 	
 	// makeIntNode(int n) instantiates a node that represents the constant integer n and that offers
 	// an accessor method that returns n.
@@ -34,6 +35,9 @@ namespace AST
 
 	// makeNode(Symbol s) instantiates a node for a variable decl with the name s.
 	Node* MakeDeclNode(std::wstring* s, PrimitiveType type);
+
+	// makeNode(OpNode retExpr) instantiates a node for a return operation.
+	Node* MakeReturnNode(Node* retExpr);
 
 	// makeNullNode() instantiates a null node that explicitly represents the
 	// absence of structure.For consistency in processing an AST, it is better to

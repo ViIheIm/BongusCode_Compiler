@@ -121,6 +121,20 @@ AST::Node* AST::MakeDeclNode(std::wstring* s, PrimitiveType type)
     return node;
 }
 
+AST::Node* AST::MakeReturnNode(Node* retExpr)
+{
+    ReturnNode* node = new ReturnNode();
+    assert(node && "Failed to allocate return node");
+
+    if (retExpr->GetNodeKind() != Node_k::OpNode)
+    {
+        wprintf(L"WARNING: Return expression supplied to Return Node in " __FUNCSIG__ " is not an op node.\nThe ReturnNode::retExpr should always be an opnode.\n");
+    }
+    node->retExpr = retExpr;
+    node->kind = Node_k::ReturnNode;
+    return node;
+}
+
 AST::Node* AST::MakeNullNode()
 {
     Node* node = new Node();
