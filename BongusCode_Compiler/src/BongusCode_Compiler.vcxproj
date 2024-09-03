@@ -180,6 +180,7 @@ call $(SolutionDir)src\parser\buildparser.bat</Command>
     <ClCompile Include="AST\ASTAPI.cpp" />
     <ClCompile Include="AST\ASTNode.cpp" />
     <ClCompile Include="AST\AST_Harvest_Pass.cpp" />
+    <ClCompile Include="AST\AST_Semantics_Pass.cpp" />
     <ClCompile Include="code_generator\codegen.cpp" />
     <ClCompile Include="Exit.cpp" />
     <ClCompile Include="lexer\lexer.cpp" />
@@ -210,6 +211,7 @@ call $(SolutionDir)src\parser\buildparser.bat</Command>
     <ClInclude Include="AST\ASTAPI.h" />
     <ClInclude Include="AST\ASTNode.h" />
     <ClInclude Include="AST\AST_Harvest_Pass.h" />
+    <ClInclude Include="AST\AST_Semantics_Pass.h" />
     <ClInclude Include="BongusTable.h" />
     <ClInclude Include="BuildSettings.h" />
     <ClInclude Include="code_generator\codegen.h" />

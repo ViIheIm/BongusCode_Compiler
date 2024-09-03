@@ -111,6 +111,40 @@ namespace Prologue
 	}
 }
 
+namespace Epilogue
+{
+	inline static void WriteFunctionNameEndp(std::string& code)
+	{
+		code += "; TODO: Hard coded name, bad!\n"\
+			"main ENDP\n";
+	}
+
+	inline static void RestoreStackFrame(std::string& code)
+	{
+		code += "mov rsp, rbp\n"\
+			"pop rbp\n";
+	}
+
+	inline static void GenerateStackDeallocation(std::string& code, const i32 allocSize)
+	{
+		code += "add rsp, " + std::to_string(allocSize) + "\n";
+	}
+
+	inline static void GenerateFunctionEpilogue(std::string& code, const i32 stackAllocSizeForLocals, const i32 stackAllocSizeForTemporaries)
+	{
+		code += "; Dealloc section for local variables.\n";
+		GenerateStackDeallocation(code, stackAllocSizeForLocals);
+		code += "; Dealloc section for temporary variables.\n";
+		GenerateStackDeallocation(code, stackAllocSizeForTemporaries);
+
+		RestoreStackFrame(code);
+
+		code += "ret\n";
+
+		WriteFunctionNameEndp(code);
+	}
+}
+
 // Ugly hackaround for my architectural ineptitude. Because of how things are, a node like an opnode will get visited twice.
 // Thus, we add nodes to a visited vector, and make sure to not visit them again.
 // Maybe swap out for a hash-map in the future, if you decide to keep this monstrosity.
@@ -328,6 +362,28 @@ namespace Body
 
 			break;
 		}
+		case Node_k::ReturnNode:
+		{
+			AST::ReturnNode* asReturnNode = (AST::ReturnNode*)node;
+
+			// The result of the expression we're about to evaluate is stored in rax by default,
+			// so we don't need to do anything more than ensure that the expression's code is generated.
+
+			code += "\n; Return expression:";
+
+			// Generate operation code. Remember that the temporaries stack section needs to be reset!
+			auto [t1, t1place] = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
+			GenOpNodeCode(code, asReturnNode->GetRetExpr(), t1, t1place);
+
+			// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
+			gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
+
+			// Since we're returning, time to generate the epilogue.
+			CurrentFunctionMetaData::temporariesStackSectionSize = *largestTempAllocation;
+			Epilogue::GenerateFunctionEpilogue(code, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
+
+			break;
+		}
 		}
 	
 		for (AST::Node* child : node->GetChildren())
@@ -339,40 +395,6 @@ namespace Body
 			}
 			GenerateFunctionBody(code, child, largestTempAllocation);
 		}
-	}
-}
-
-namespace Epilogue
-{
-	inline static void WriteFunctionNameEndp(std::string& code)
-	{
-		code += "; TODO: Hard coded name, bad!\n"\
-				"main ENDP\n";
-	}
-
-	inline static void RestoreStackFrame(std::string& code)
-	{
-		code += "mov rsp, rbp\n"\
-				"pop rbp\n";
-	}
-
-	inline static void GenerateStackDeallocation(std::string& code, i32 allocSize)
-	{
-		code += "add rsp, " + std::to_string(allocSize) + "\n";
-	}
-
-	inline static void GenerateFunctionEpilogue(std::string& code, AST::Node* node, i32 stackAllocSizeForLocals, i32 stackAllocSizeForTemporaries)
-	{
-		code += "; Dealloc section for local variables.\n";
-		GenerateStackDeallocation(code, stackAllocSizeForLocals);
-		code += "; Dealloc section for temporary variables.\n";
-		GenerateStackDeallocation(code, stackAllocSizeForTemporaries);
-
-		RestoreStackFrame(code);
-
-		code += "ret\n";
-
-		WriteFunctionNameEndp(code);
 	}
 }
 
@@ -418,9 +440,10 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 	outCode = boilerplateHeader;
 	//NOTE /\ is assignment, not += !!!!!
 
-	// Function body, add loop later
+	// Function body, add loop later for each function node to generate every function.
 	{
-		std::string prologue, body, epilogue;
+		// Epilogue contained in body.
+		std::string prologue, body;
 		
 		// Because we use the stack for temporaries, we need to figure out how much stack space to reserve in the body,
 		// and cannot go on amount of declnodes alone in the prologue function.
@@ -441,15 +464,10 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 
 		prologue += "\n\n\n; Prologue\n";
 		Prologue::GenerateFunctionPrologue(prologue, nodeHead, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
-
-		epilogue += "\n\n\n; Epilogue\n";
-		Epilogue::GenerateFunctionEpilogue(epilogue, nodeHead, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
 	
-		outCode += prologue + body + epilogue;
+		outCode += prologue + body;
 	}
 
 	Boilerplate::GenerateFooter(boilerplateFooter);
 	outCode += boilerplateFooter;
-
-	// std::cerr << outCode << std::endl;
 }

@@ -7,7 +7,8 @@ enum class ErrCodes : i32
 	malformed_cmd_line,
 	undeclared_symbol,
 	syntax_error,
-	unknown_type
+	unknown_type,
+	unreachable_code
 };
 
 inline const wchar_t* ErrorsToString[] = {
@@ -15,7 +16,8 @@ inline const wchar_t* ErrorsToString[] = {
 	L"Malformed command line arguments list",
 	L"Undeclared symbol",
 	L"Syntax error",
-	L"Unknown type"
+	L"Unknown type",
+	L"Unreachable code"
 };
 
 [[noreturn]] void Exit(ErrCodes errCode);

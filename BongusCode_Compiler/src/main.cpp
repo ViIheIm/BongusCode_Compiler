@@ -10,6 +10,7 @@
 #include "parser/parser.hpp"
 #include "lexer/lexer.h"
 #include "AST/AST_Harvest_Pass.h"
+#include "AST/AST_Semantics_Pass.h"
 #include "symbol_table/symtable.h"
 #include "code_generator/codegen.h"
 
@@ -113,6 +114,8 @@ i32 main(i32 argc, char** argv)
 	// First pass over AST: we harvest the symbol declarations and resolve symbol references. Page 280.
 	AST::BuildSymbolTable(g_nodeHead);
 	
+	// Second pass over the AST: we check to make sure no semantic rules are violated.
+	AST::SemanticsPass(g_nodeHead);
 
 	// Now it's finally time to generate some code.
 	std::string code;
