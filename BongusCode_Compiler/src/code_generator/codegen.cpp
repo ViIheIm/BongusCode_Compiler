@@ -224,16 +224,82 @@ bool FindNodeInVisitedNodes(AST::Node* node)
 #include <iostream>
 namespace Body
 {
-	constexpr const i32 temporariesTOS = 0;
-	inline static std::string RefTempVar(const i32 offset)
+	inline static std::string RefTempVar(const i32 offset, const PrimitiveType type)
 	{
 		// EXAMPLE:
 		// mov eax, DWORD PTR 4[rsp]					// Go past the locals and into the temporaries section of the stack.
-		return std::string("QWORD PTR " + std::to_string(CurrentFunctionMetaData::varsStackSectionSize + offset) + "[rsp]");
+
+		std::string wordKind;
+
+		switch (type)
+		{
+			case PrimitiveType::ui64:
+			case PrimitiveType::i64:
+			{
+				wordKind = "QWORD PTR";
+				break;
+			}
+
+			case PrimitiveType::ui32:
+			case PrimitiveType::i32:
+			{
+				wordKind = "DWORD PTR";
+				break;
+			}
+
+			case PrimitiveType::ui16:
+			case PrimitiveType::i16:
+			{
+				wordKind = "WORD PTR";
+				break;
+			}
+
+			default:
+			{
+				wprintf(L"ERROR: Type %hu supplied to " __FUNCSIG__ " is invalid.\n", type);
+				Exit(ErrCodes::internal_compiler_error);
+				break;
+			}
+		}
+
+		return std::string(wordKind + " " + std::to_string(CurrentFunctionMetaData::varsStackSectionSize + offset) + "[rsp]");
 	}
-	inline static std::string RefLocalVar(const i32 offset)
+	inline static std::string RefLocalVar(const i32 offset, const PrimitiveType type)
 	{
-		return std::string("QWORD PTR " + std::to_string(offset) + "[rsp]");
+		std::string wordKind;
+
+		switch (type)
+		{
+		case PrimitiveType::ui64:
+		case PrimitiveType::i64:
+		{
+			wordKind = "QWORD PTR";
+			break;
+		}
+
+		case PrimitiveType::ui32:
+		case PrimitiveType::i32:
+		{
+			wordKind = "DWORD PTR";
+			break;
+		}
+
+		case PrimitiveType::ui16:
+		case PrimitiveType::i16:
+		{
+			wordKind = "WORD PTR";
+			break;
+		}
+
+		default:
+		{
+			wprintf(L"ERROR: Type %hu supplied to " __FUNCSIG__ " is invalid.\n", type);
+			Exit(ErrCodes::internal_compiler_error);
+			break;
+		}
+		}
+
+		return std::string(wordKind + " " + std::to_string(offset) + "[rsp]");
 	}
 
 	//										TODO: Stick name and place in a custom struct and send a const reference to that, to reduce
@@ -329,11 +395,15 @@ namespace Body
 				Exit(ErrCodes::undeclared_symbol);
 			}
 
+			// The temporary inherits its size from the symbol it is copying data from here.
 			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, entry->size);
 
+			// Get correct register based on entry size.
+			const std::string& reg = GetReg(RG::RAX, entry->type);
+
 			std::string output = "\n; " + name + " = (local var at stackLoc " + std::to_string(entry->stackLocation) + ")" +
-								 "\nmov rax, " + RefLocalVar(entry->stackLocation) +
-								 "\nmov " + RefTempVar(place) + ", rax" + "\n";
+								 "\nmov " + reg + ", " + RefLocalVar(entry->stackLocation) +
+								 "\nmov " + RefTempVar(place) + ", " + reg + "\n";
 
 			code += output;
 			// std::cerr << output;
