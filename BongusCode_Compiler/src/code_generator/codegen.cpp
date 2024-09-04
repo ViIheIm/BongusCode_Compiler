@@ -105,10 +105,18 @@ ui32 AllocLocals(AST::Node* funcHeadNode)
 	return allocSize;
 }
 
+// Temporary variables used by the compiler, like _t0, _t1.
+struct TempVar
+{
+	std::string name;
+	i32 place;
+	PrimitiveType type;
+};
+
 // Allocation is done in two steps. First we get the allocated space with AllocStackSpace(), then we call CommitLastStackAlloc().
 // The recordAllocs-parameter is where we store the stack space information
 // (CurrentFunctionMetaData::temporariesStackSectionSize for instance).
-inline static std::tuple<std::string, i32> AllocStackSpace(i32* recordAllocs, bool resetHitCount = false)
+inline static TempVar AllocStackSpace(i32* recordAllocs, bool resetHitCount = false)
 {
 	static i32 hitCount = 0; // <-- Yield _t0, _t1, _t2 ...
 
@@ -119,7 +127,8 @@ inline static std::tuple<std::string, i32> AllocStackSpace(i32* recordAllocs, bo
 
 	std::string retStr("_t" + std::to_string(hitCount++));
 
-	return std::tuple<std::string, i32>(retStr, *recordAllocs);
+	// We don't know the type yet, so make sure to provide that later.
+	return { retStr, *recordAllocs, PrimitiveType::invalid };
 }
 
 // This is where we commit the last allocation made with AllocStackSpace().
@@ -304,7 +313,7 @@ namespace Body
 
 	//										TODO: Stick name and place in a custom struct and send a const reference to that, to reduce
 	//											  memory usage for this recursive function.
-	static void GenOpNodeCode(std::string& code, AST::Node* node, const std::string& name, const i32 place)
+	static void GenOpNodeCode(std::string& code, AST::Node* node, const TempVar& t0)
 	{
 		visitedNodes.push_back(node);
 	
@@ -316,35 +325,36 @@ namespace Body
 			std::string opString = asOpNode->GetOpAsString();
 	
 
-			GenOpNodeCode(code, asOpNode->GetLHS(), name, place);
+			GenOpNodeCode(code, asOpNode->GetLHS(), t0);
 	
-			auto [t1, t1place] = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
-			GenOpNodeCode(code, asOpNode->GetRHS(), t1, t1place);
+			//auto [t1, t1place] = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+			GenOpNodeCode(code, asOpNode->GetRHS(), t1);
 	
 			if (opString == "+")
 			{
-				std::string output = "\n; " + name + " += " + t1 +
-									 "\nmov rax, " + RefTempVar(place) +		// Store _tfirst in eax
-									 "\nadd rax, " + RefTempVar(t1place) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(place) + ", rax\n";	// Store result in _tfirst on stack
+				std::string output = "\n; " + t0.name + " += " + t1.name +
+									 "\nmov rax, " + RefTempVar(t0.place) +		// Store _tfirst in eax
+									 "\nadd rax, " + RefTempVar(t1.place) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.place) + ", rax\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
 			if (opString == "-")
 			{
-				std::string output = "\n; " + name + " -= " + t1 +
-									 "\nmov rax, " + RefTempVar(place) +		// Store _tfirst in eax
-									 "\nsub rax, " + RefTempVar(t1place) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(place) + ", rax\n";	// Store result in _tfirst on stack
+				std::string output = "\n; " + t0.name + " -= " + t1.name +
+									 "\nmov rax, " + RefTempVar(t0.place) +		// Store _tfirst in eax
+									 "\nsub rax, " + RefTempVar(t1.place) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.place) + ", rax\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
 			else if (opString == "*")
 			{
-				std::string output = "\n; " + name + " *= " + t1 +
-									 "\nmov rax, " + RefTempVar(place) +		// Store _tfirst in eax
-									 "\nimul rax, " + RefTempVar(t1place) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(place) + ", rax\n";	// Store result in _tfirst on stack
+				std::string output = "\n; " + t0.name + " *= " + t1.name +
+									 "\nmov rax, " + RefTempVar(t0.place) +		// Store _tfirst in eax
+									 "\nimul rax, " + RefTempVar(t1.place) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.place) + ", rax\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
@@ -354,14 +364,14 @@ namespace Body
 				// https://www.youtube.com/watch?v=vwTYM0oSwjg
 				// TLDR: For 64 bit division, the result goes in rax, the remainder in rdx
 				// The divisor goes in rbx.
-				std::string output = "\n; " + name + " /= " + t1 +
-									 "\nmov rax, " + RefTempVar(place) +		// Store _tfirst in eax
-									 "\nmov rbx, " + RefTempVar(t1place) +		// Store divisor in rbx
+				std::string output = "\n; " + t0.name + " /= " + t1.name +
+									 "\nmov rax, " + RefTempVar(t0.place) +		// Store _tfirst in eax
+									 "\nmov rbx, " + RefTempVar(t1.place) +		// Store divisor in rbx
 									 "\nxor rdx, rdx" +							// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
 									 "\ndiv rbx" +								// Perform operation in ebx
 									 "\nmov rbx, 3405691582 ; 0xCAFEBABE" +		// Store sentinel value CAFEBABE in rbx in case of bugs.
 									 "\nmov rdx, 4276993775 ; 0xFEEDBEEF" +		// Do the same for rdx with FEEDBEEF since it was also used.
-									 "\nmov " + RefTempVar(place) + ", rax\n";	// Store result in _tfirst on stack
+									 "\nmov " + RefTempVar(t0.place) + ", rax\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
@@ -372,11 +382,11 @@ namespace Body
 		{
 			AST::IntNode* asIntNode = (AST::IntNode*)node;
 	
-			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, asIntNode->GetSize());
+			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, /* Change!!!!!!!--> */asIntNode->GetSize());
 
-			std::string output = "\n; " + name + " = " + std::to_string(asIntNode->Get()) +
-								 "\nmov " + RefTempVar(place) + ", " + std::to_string(asIntNode->Get()) +
-								 "\nmov rax, " + RefTempVar(place) + "\n"; // Also store result in rax.
+			std::string output = "\n; " + t0.name + " = " + std::to_string(asIntNode->Get()) +
+								 "\nmov " + RefTempVar(t0.place) + ", " + std::to_string(asIntNode->Get()) +
+								 "\nmov rax, " + RefTempVar(t0.place) + "\n"; // Also store result in rax.
 			code += output;
 			// std::cerr << output;
 	
@@ -401,9 +411,9 @@ namespace Body
 			// Get correct register based on entry size.
 			const std::string& reg = GetReg(RG::RAX, entry->type);
 
-			std::string output = "\n; " + name + " = (local var at stackLoc " + std::to_string(entry->stackLocation) + ")" +
+			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->stackLocation) + ")" +
 								 "\nmov " + reg + ", " + RefLocalVar(entry->stackLocation) +
-								 "\nmov " + RefTempVar(place) + ", " + reg + "\n";
+								 "\nmov " + RefTempVar(t0.place) + ", " + reg + "\n";
 
 			code += output;
 			// std::cerr << output;
@@ -424,87 +434,87 @@ namespace Body
 	
 		switch (node->GetNodeKind())
 		{
-		case Node_k::OpNode:
-		{
-			auto[t1, t1place] = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
-			GenOpNodeCode(code, node, t1, t1place);
-			
-			// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
-			gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
-			// Enforce allocation policy.
-			CurrentFunctionMetaData::temporariesStackSectionSize = 0;
-
-
-
-
-			break;
-		}
-		case Node_k::AssNode:
-		{
-			AST::AssNode* asAssNode = (AST::AssNode*)node;
-
-			// Get target of assignment
-			i32 stackLocation = -1;
-			if (asAssNode->GetVar()->GetNodeKind() == Node_k::SymNode)
+			case Node_k::OpNode:
 			{
-				AST::SymNode* var = (AST::SymNode*)asAssNode->GetVar();
+				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
+				GenOpNodeCode(code, node, t0);
+				
+				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
+				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
+				// Enforce allocation policy.
+				CurrentFunctionMetaData::temporariesStackSectionSize = 0;
 
-				std::wstring key = g_symTable.ComposeKey(var->GetName(), 1); // TODO: Restructure symbol table.
-				SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
 
-				if (entry == nullptr)
+
+
+				break;
+			}
+			case Node_k::AssNode:
+			{
+				AST::AssNode* asAssNode = (AST::AssNode*)node;
+
+				// Get target of assignment
+				i32 stackLocation = -1;
+				if (asAssNode->GetVar()->GetNodeKind() == Node_k::SymNode)
 				{
-					wprintf(L"ERROR: Couldn't find symtable entry for %s.\n", var->GetName().c_str());
-					Exit(ErrCodes::undeclared_symbol);
+					AST::SymNode* var = (AST::SymNode*)asAssNode->GetVar();
+
+					std::wstring key = g_symTable.ComposeKey(var->GetName(), 1); // TODO: Restructure symbol table.
+					SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+
+					if (entry == nullptr)
+					{
+						wprintf(L"ERROR: Couldn't find symtable entry for %s.\n", var->GetName().c_str());
+						Exit(ErrCodes::undeclared_symbol);
+					}
+
+
+					stackLocation = entry->stackLocation;
 				}
 
+				// Generate operation code. Remember that the temporaries stack section needs to be reset!
+				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
+				GenOpNodeCode(code, asAssNode->GetExpr(), t0);
 
-				stackLocation = entry->stackLocation;
+				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
+				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
+				// Enforce allocation policy(doing the aforementioned resetting).
+				CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+
+
+
+
+				// Store result (held in rax and on the temporaries-stack) in var.
+				std::string output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)" +
+									 "\nmov " + RefLocalVar(stackLocation) + ", rax\n";
+
+				code += output;
+				// std::cerr << output;
+
+				break;
 			}
+			case Node_k::ReturnNode:
+			{
+				AST::ReturnNode* asReturnNode = (AST::ReturnNode*)node;
 
-			// Generate operation code. Remember that the temporaries stack section needs to be reset!
-			auto [t1, t1place] = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
-			GenOpNodeCode(code, asAssNode->GetExpr(), t1, t1place);
+				// The result of the expression we're about to evaluate is stored in rax by default,
+				// so we don't need to do anything more than ensure that the expression's code is generated.
 
-			// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
-			gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
-			// Enforce allocation policy(doing the aforementioned resetting).
-			CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+				code += "\n; Return expression:";
 
+				// Generate operation code. Remember that the temporaries stack section needs to be reset!
+				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
+				GenOpNodeCode(code, asReturnNode->GetRetExpr(), t0);
 
+				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
+				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
 
+				// Since we're returning, time to generate the epilogue.
+				CurrentFunctionMetaData::temporariesStackSectionSize = *largestTempAllocation;
+				Epilogue::GenerateFunctionEpilogue(code, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
 
-			// Store result (held in rax and on the temporaries-stack) in var.
-			std::string output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)" +
-								 "\nmov " + RefLocalVar(stackLocation) + ", rax\n";
-
-			code += output;
-			// std::cerr << output;
-
-			break;
-		}
-		case Node_k::ReturnNode:
-		{
-			AST::ReturnNode* asReturnNode = (AST::ReturnNode*)node;
-
-			// The result of the expression we're about to evaluate is stored in rax by default,
-			// so we don't need to do anything more than ensure that the expression's code is generated.
-
-			code += "\n; Return expression:";
-
-			// Generate operation code. Remember that the temporaries stack section needs to be reset!
-			auto [t1, t1place] = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
-			GenOpNodeCode(code, asReturnNode->GetRetExpr(), t1, t1place);
-
-			// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
-			gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
-
-			// Since we're returning, time to generate the epilogue.
-			CurrentFunctionMetaData::temporariesStackSectionSize = *largestTempAllocation;
-			Epilogue::GenerateFunctionEpilogue(code, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
-
-			break;
-		}
+				break;
+			}
 		}
 	
 		for (AST::Node* child : node->GetChildren())
