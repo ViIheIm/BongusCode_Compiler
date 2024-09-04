@@ -8,6 +8,8 @@
 	TODO: Integrate function name mangler from sandbox!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 */
 
+// TODO: Research the possibility of supplying a primitive type to figure out a register, instead of using size.
+
 namespace Registers
 {
 	enum class eRegisters : ui16
