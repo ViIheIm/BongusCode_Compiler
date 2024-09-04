@@ -8,6 +8,60 @@
 	TODO: Integrate function name mangler from sandbox!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 */
 
+namespace Registers
+{
+	enum class eRegisters : ui16
+	{
+		RAX,
+		RBX,
+		RCX,
+		RDX,
+		R8,
+		R9,
+		size
+	};
+
+	const std::string Regs[(ui64)eRegisters::size][4] = {
+		{ "RAX", "EAX", "AX", "AL" },
+		{ "RBX", "EBX", "BX", "BL" },
+		{ "RCX", "ECX", "CX", "CL" },
+		{ "RDX", "EDX", "DX", "DL" },
+		{ "R8", "R8D", "R8W", "R8B" },
+		{ "R9", "R9D", "R9W", "R9B" },
+	};
+
+	inline static const ui16 GetSubscriptFromSize(const ui16 size)
+	{
+		switch (size)
+		{
+		case 8:
+			return 0;
+
+		case 4:
+			return 1;
+
+		case 2:
+			return 2;
+
+		case 1:
+			return 3;
+
+		default:
+			wprintf(L"ERROR: Size %hu supplied to " __FUNCSIG__ " does not correspond with any register size.\n", size);
+			Exit(ErrCodes::internal_compiler_error);
+			return -1;
+		}
+	}
+}
+
+using RG = Registers::eRegisters;
+inline static const std::string& GetReg(RG reg, const ui16 size)
+{
+	using namespace Registers;
+
+	return Regs[(ui64)reg][GetSubscriptFromSize(size)];
+}
+
 // Processes local variables by incrementing the total allocation size, aswell as entering
 // stack location for this variable into the symbol table.
 void ProcessLocalsCallback(AST::Node* n, void* args)
@@ -116,13 +170,13 @@ namespace Epilogue
 	inline static void WriteFunctionNameEndp(std::string& code)
 	{
 		code += "; TODO: Hard coded name, bad!\n"\
-			"main ENDP\n";
+				"main ENDP\n";
 	}
 
 	inline static void RestoreStackFrame(std::string& code)
 	{
 		code += "mov rsp, rbp\n"\
-			"pop rbp\n";
+				"pop rbp\n";
 	}
 
 	inline static void GenerateStackDeallocation(std::string& code, const i32 allocSize)
@@ -182,13 +236,6 @@ namespace Body
 	//											  memory usage for this recursive function.
 	static void GenOpNodeCode(std::string& code, AST::Node* node, const std::string& name, const i32 place)
 	{
-		/*
-			; (c + d)
-			mov eax, DWORD PTR d$[rsp]
-			mov ecx, DWORD PTR c$[rsp]
-			add ecx, eax				; (ecx = c + d)
-			mov eax, ecx				; (eax = c + d) CACHE RES IN EAX
-		*/
 		visitedNodes.push_back(node);
 	
 		switch (node->GetNodeKind())
