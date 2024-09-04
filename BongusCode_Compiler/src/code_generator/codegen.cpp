@@ -8,8 +8,6 @@
 	TODO: Integrate function name mangler from sandbox!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 */
 
-// TODO: Research the possibility of supplying a primitive type to figure out a register, instead of using size.
-
 namespace Registers
 {
 	enum class eRegisters : ui16
@@ -32,24 +30,28 @@ namespace Registers
 		{ "R9", "R9D", "R9W", "R9B" },
 	};
 
-	inline static const ui16 GetSubscriptFromSize(const ui16 size)
+	inline static const ui16 GetSubscriptFromType(const PrimitiveType type)
 	{
-		switch (size)
+		switch (type)
 		{
-		case 8:
+		case PrimitiveType::ui64:
+		case PrimitiveType::i64:
 			return 0;
 
-		case 4:
+		case PrimitiveType::ui32:
+		case PrimitiveType::i32:
 			return 1;
 
-		case 2:
+		case PrimitiveType::ui16:
+		case PrimitiveType::i16:
 			return 2;
 
-		case 1:
+		case PrimitiveType::ui8:
+		case PrimitiveType::i8:
 			return 3;
 
 		default:
-			wprintf(L"ERROR: Size %hu supplied to " __FUNCSIG__ " does not correspond with any register size.\n", size);
+			wprintf(L"ERROR: Type %hu supplied to " __FUNCSIG__ " does not correspond with any register size.\n", type);
 			Exit(ErrCodes::internal_compiler_error);
 			return -1;
 		}
@@ -57,11 +59,11 @@ namespace Registers
 }
 
 using RG = Registers::eRegisters;
-inline static const std::string& GetReg(RG reg, const ui16 size)
+inline static const std::string& GetReg(RG reg, const PrimitiveType type)
 {
 	using namespace Registers;
 
-	return Regs[(ui64)reg][GetSubscriptFromSize(size)];
+	return Regs[(ui64)reg][GetSubscriptFromType(type)];
 }
 
 // Processes local variables by incrementing the total allocation size, aswell as entering
