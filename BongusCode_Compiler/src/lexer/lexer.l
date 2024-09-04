@@ -25,6 +25,8 @@ WHITESPACE		[[:space:]]+
 
 KWD_UI8			"ui8"
 KWD_I8			"i8"
+KWD_UI16		"ui16"
+KWD_I16			"i16"
 KWD_UI32		"ui32"
 KWD_I32			"i32"
 KWD_UI64		"ui64"
@@ -61,6 +63,14 @@ SEMI			\.
 {KWD_I8}
 	LEXLOG(L"Found KWD_I8: %s\n", wstr().c_str());
 	return BTok::KWD_I8;
+
+{KWD_UI16}
+	LEXLOG(L"Found KWD_UI16: %s\n", wstr().c_str());
+	return BTok::KWD_UI16;
+
+{KWD_I16}
+	LEXLOG(L"Found KWD_I16: %s\n", wstr().c_str());
+	return BTok::KWD_I16;
 
 {KWD_UI32}
 	LEXLOG(L"Found KWD_UI32: %s\n", wstr().c_str());

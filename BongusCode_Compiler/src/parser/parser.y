@@ -54,6 +54,8 @@
 
 %token KWD_UI8
 %token KWD_I8
+%token KWD_UI16
+%token KWD_I16
 %token KWD_UI32
 %token KWD_I32
 %token KWD_UI64
@@ -142,8 +144,14 @@ factor: NUM_LIT						{ $$ = AST::MakeIntNode($1); }
 varDecl: type ID					{ $$ = AST::MakeDeclNode($2, $1); }
 	   ;
 
-type: KWD_UI64						{ $$ = PrimitiveType::ui64; }
-	| KWD_I64						{ $$ = PrimitiveType::i64; }
+type: KWD_UI16						{ $$ = PrimitiveType::ui16; }
+	| KWD_I16						{ $$ = PrimitiveType::i16;	}
+
+	| KWD_UI32						{ $$ = PrimitiveType::ui32;	}
+	| KWD_I32						{ $$ = PrimitiveType::i32;	}
+
+	| KWD_UI64						{ $$ = PrimitiveType::ui64; }
+	| KWD_I64						{ $$ = PrimitiveType::i64;	}
 	;
 //!Variable declaration -----------------------------------------------------------------------
 

@@ -82,6 +82,16 @@ AST::Node* AST::MakeDeclNode(std::wstring* s, PrimitiveType type)
         node->size = 1;
         break;
     }
+    case PrimitiveType::ui16:
+    {
+        node->size = 2;
+        break;
+    }
+    case PrimitiveType::i16:
+    {
+        node->size = 2;
+        break;
+    }
     case PrimitiveType::ui32:
     {
         node->size = 4;

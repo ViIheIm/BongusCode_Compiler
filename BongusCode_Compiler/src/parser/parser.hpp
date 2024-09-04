@@ -249,21 +249,23 @@ namespace yy {
     NUM_LIT = 259,                 // NUM_LIT
     KWD_UI8 = 260,                 // KWD_UI8
     KWD_I8 = 261,                  // KWD_I8
-    KWD_UI32 = 262,                // KWD_UI32
-    KWD_I32 = 263,                 // KWD_I32
-    KWD_UI64 = 264,                // KWD_UI64
-    KWD_I64 = 265,                 // KWD_I64
-    KWD_RETURN = 266,              // KWD_RETURN
-    EQ_OP = 267,                   // EQ_OP
-    PLUS_OP = 268,                 // PLUS_OP
-    MINUS_OP = 269,                // MINUS_OP
-    MUL_OP = 270,                  // MUL_OP
-    DIV_OP = 271,                  // DIV_OP
-    LPAREN = 272,                  // LPAREN
-    RPAREN = 273,                  // RPAREN
-    LCURLY = 274,                  // LCURLY
-    RCURLY = 275,                  // RCURLY
-    SEMI = 276                     // SEMI
+    KWD_UI16 = 262,                // KWD_UI16
+    KWD_I16 = 263,                 // KWD_I16
+    KWD_UI32 = 264,                // KWD_UI32
+    KWD_I32 = 265,                 // KWD_I32
+    KWD_UI64 = 266,                // KWD_UI64
+    KWD_I64 = 267,                 // KWD_I64
+    KWD_RETURN = 268,              // KWD_RETURN
+    EQ_OP = 269,                   // EQ_OP
+    PLUS_OP = 270,                 // PLUS_OP
+    MINUS_OP = 271,                // MINUS_OP
+    MUL_OP = 272,                  // MUL_OP
+    DIV_OP = 273,                  // DIV_OP
+    LPAREN = 274,                  // LPAREN
+    RPAREN = 275,                  // RPAREN
+    LCURLY = 276,                  // LCURLY
+    RCURLY = 277,                  // RCURLY
+    SEMI = 278                     // SEMI
       };
       /// Backward compatibility alias (Bison 3.6).
       typedef token_kind_type yytokentype;
@@ -280,7 +282,7 @@ namespace yy {
     {
       enum symbol_kind_type
       {
-        YYNTOKENS = 22, ///< Number of tokens.
+        YYNTOKENS = 24, ///< Number of tokens.
         S_YYEMPTY = -2,
         S_YYEOF = 0,                             // "end of file"
         S_YYerror = 1,                           // error
@@ -289,35 +291,37 @@ namespace yy {
         S_NUM_LIT = 4,                           // NUM_LIT
         S_KWD_UI8 = 5,                           // KWD_UI8
         S_KWD_I8 = 6,                            // KWD_I8
-        S_KWD_UI32 = 7,                          // KWD_UI32
-        S_KWD_I32 = 8,                           // KWD_I32
-        S_KWD_UI64 = 9,                          // KWD_UI64
-        S_KWD_I64 = 10,                          // KWD_I64
-        S_KWD_RETURN = 11,                       // KWD_RETURN
-        S_EQ_OP = 12,                            // EQ_OP
-        S_PLUS_OP = 13,                          // PLUS_OP
-        S_MINUS_OP = 14,                         // MINUS_OP
-        S_MUL_OP = 15,                           // MUL_OP
-        S_DIV_OP = 16,                           // DIV_OP
-        S_LPAREN = 17,                           // LPAREN
-        S_RPAREN = 18,                           // RPAREN
-        S_LCURLY = 19,                           // LCURLY
-        S_RCURLY = 20,                           // RCURLY
-        S_SEMI = 21,                             // SEMI
-        S_YYACCEPT = 22,                         // $accept
-        S_program = 23,                          // program
-        S_scopes = 24,                           // scopes
-        S_scope = 25,                            // scope
-        S_stmts = 26,                            // stmts
-        S_stmt = 27,                             // stmt
-        S_expr = 28,                             // expr
-        S_addExpr = 29,                          // addExpr
-        S_mulExpr = 30,                          // mulExpr
-        S_factor = 31,                           // factor
-        S_varDecl = 32,                          // varDecl
-        S_type = 33,                             // type
-        S_varAss = 34,                           // varAss
-        S_returnOp = 35                          // returnOp
+        S_KWD_UI16 = 7,                          // KWD_UI16
+        S_KWD_I16 = 8,                           // KWD_I16
+        S_KWD_UI32 = 9,                          // KWD_UI32
+        S_KWD_I32 = 10,                          // KWD_I32
+        S_KWD_UI64 = 11,                         // KWD_UI64
+        S_KWD_I64 = 12,                          // KWD_I64
+        S_KWD_RETURN = 13,                       // KWD_RETURN
+        S_EQ_OP = 14,                            // EQ_OP
+        S_PLUS_OP = 15,                          // PLUS_OP
+        S_MINUS_OP = 16,                         // MINUS_OP
+        S_MUL_OP = 17,                           // MUL_OP
+        S_DIV_OP = 18,                           // DIV_OP
+        S_LPAREN = 19,                           // LPAREN
+        S_RPAREN = 20,                           // RPAREN
+        S_LCURLY = 21,                           // LCURLY
+        S_RCURLY = 22,                           // RCURLY
+        S_SEMI = 23,                             // SEMI
+        S_YYACCEPT = 24,                         // $accept
+        S_program = 25,                          // program
+        S_scopes = 26,                           // scopes
+        S_scope = 27,                            // scope
+        S_stmts = 28,                            // stmts
+        S_stmt = 29,                             // stmt
+        S_expr = 30,                             // expr
+        S_addExpr = 31,                          // addExpr
+        S_mulExpr = 32,                          // mulExpr
+        S_factor = 33,                           // factor
+        S_varDecl = 34,                          // varDecl
+        S_type = 35,                             // type
+        S_varAss = 36,                           // varAss
+        S_returnOp = 37                          // returnOp
       };
     };
 
@@ -805,9 +809,9 @@ namespace yy {
     /// Constants.
     enum
     {
-      yylast_ = 35,     ///< Last index in yytable_.
+      yylast_ = 43,     ///< Last index in yytable_.
       yynnts_ = 14,  ///< Number of nonterminal symbols.
-      yyfinal_ = 21 ///< Termination state number.
+      yyfinal_ = 25 ///< Termination state number.
     };
 
 
@@ -818,7 +822,7 @@ namespace yy {
 
 
 } // yy
-#line 822 "parser.hpp"
+#line 826 "parser.hpp"
 
 
 

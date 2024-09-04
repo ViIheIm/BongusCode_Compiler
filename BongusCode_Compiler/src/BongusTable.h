@@ -46,6 +46,9 @@ enum class PrimitiveType : ui16
 	ui8,
 	i8,
 
+	ui16,
+	i16,
+
 	ui32,
 	i32,
 
