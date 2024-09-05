@@ -401,9 +401,10 @@ namespace Body
 			AST::IntNode* asIntNode = (AST::IntNode*)node;
 	
 			// Get size we need to allocate.
-			const ui16 sizeToAlloc = GetSizeFromType(exprType);
+			//const ui16 sizeToAlloc = GetSizeFromType(exprType);
+			//CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, sizeToAlloc);
 
-			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, sizeToAlloc);
+			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
 
 			const std::string& reg = GetReg(RG::RAX, exprType);
 
@@ -435,22 +436,27 @@ namespace Body
 			if (exprType != entry->type)
 			{
 				wprintf(L"WARNING: Truncation or signed-unsigned mismatch when trying to copy %s into temporary.\n"\
-						L"Assignee has type %s, local var has type %s.\n",
+						L"Assignee has type %s, local var has type %s.\n\n",
 						entry->name.c_str(), PrimitiveTypeReflectionWide[(ui16)exprType], PrimitiveTypeReflectionWide[(ui16)entry->type]
 				);
 
 				code += "\n; WARNING - Truncation or signed-unsigned mismatch";
 			}
 
-			// The temporary inherits its size from the assignee(exprType param).
+			// We must figure out whichever one is smaller. The temporary will still have exprType as it's type, but when we get the value
+			// into rax we need to use the appropriate size (QWORD PTR/DWORD PTR ... and RAX/EAX/AX ...)
+			PrimitiveType smallestType = exprSize < entry->size ? exprType : entry->type;
+
 			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
 
-			// Get correct register based on exprType.
-			const std::string& reg = GetReg(RG::RAX, exprType);
+			// One version of the register is for when we get the local variable into rax,
+			// and the other is for when we export the value from rax into the temporary.
+			const std::string& readReg = GetReg(RG::RAX, smallestType);
+			const std::string& writeReg = GetReg(RG::RAX, exprType);
 
 			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->stackLocation) + ")" +
-								 "\nmov " + reg + ", " + RefLocalVar(entry->stackLocation, exprType) +
-								 "\nmov " + RefTempVar(t0.place, exprType) + ", " + reg + "\n";
+								 "\nmov " + readReg + ", " + RefLocalVar(entry->stackLocation, smallestType) +
+								 "\nmov " + RefTempVar(t0.place, exprType) + ", " + writeReg + "\n";
 
 			code += output;
 			// std::cerr << output;
@@ -529,6 +535,7 @@ namespace Body
 
 
 				// Store result (held in rax and on the temporaries-stack) in var.
+				// TODO: Maybe integrate function name mangling for variable names aswell, so we can write out the variable name instead of stack location.
 				std::string output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)" +
 									 "\nmov " + RefLocalVar(stackLocation, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
 
