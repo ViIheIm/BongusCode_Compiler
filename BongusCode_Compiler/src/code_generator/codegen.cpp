@@ -311,11 +311,30 @@ namespace Body
 		return std::string(wordKind + " " + std::to_string(offset) + "[rsp]");
 	}
 
-	//										TODO: Stick name and place in a custom struct and send a const reference to that, to reduce
-	//											  memory usage for this recursive function.
-	static void GenOpNodeCode(std::string& code, AST::Node* node, const TempVar& t0)
+	static void GenOpNodeCode(std::string& code, AST::Node* node, const TempVar& t0, const PrimitiveType exprType)
 	{
 		visitedNodes.push_back(node);
+
+		const auto GetSizeFromType = [](const PrimitiveType t) -> ui16 {
+			switch (t)
+			{
+			case PrimitiveType::ui64:
+			case PrimitiveType::i64:
+				return 8;
+			case PrimitiveType::ui32:
+			case PrimitiveType::i32:
+				return 4;
+			case PrimitiveType::ui16:
+			case PrimitiveType::i16:
+				return 2;
+			default:
+				wprintf(L"ERROR: Invalid type: %hu.\n", t);
+				Exit(ErrCodes::internal_compiler_error);
+			}
+		};
+
+		// Get size from expression type.
+		const ui16 exprSize = GetSizeFromType(exprType);
 	
 		switch (node->GetNodeKind())
 		{
@@ -455,6 +474,8 @@ namespace Body
 
 				// Get target of assignment
 				i32 stackLocation = -1;
+				PrimitiveType exprType = PrimitiveType::invalid;
+
 				if (asAssNode->GetVar()->GetNodeKind() == Node_k::SymNode)
 				{
 					AST::SymNode* var = (AST::SymNode*)asAssNode->GetVar();
@@ -470,11 +491,14 @@ namespace Body
 
 
 					stackLocation = entry->stackLocation;
+					exprType = entry->type;
 				}
 
 				// Generate operation code. Remember that the temporaries stack section needs to be reset!
 				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
-				GenOpNodeCode(code, asAssNode->GetExpr(), t0);
+				// The type and size all temporaries involved in this expression will inherit depends on the type we're assigning to, effectively
+				// handling truncation immediately.
+				GenOpNodeCode(code, asAssNode->GetExpr(), t0, exprType);
 
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
 				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
