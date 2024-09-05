@@ -140,7 +140,24 @@ inline static void CommitLastStackAlloc(i32* recordAllocs, i32 size)
 	*recordAllocs += size;
 }
 
-
+inline static const ui16 GetSizeFromType(const PrimitiveType type)
+{
+	switch (type)
+	{
+	case PrimitiveType::ui64:
+	case PrimitiveType::i64:
+		return 8;
+	case PrimitiveType::ui32:
+	case PrimitiveType::i32:
+		return 4;
+	case PrimitiveType::ui16:
+	case PrimitiveType::i16:
+		return 2;
+	default:
+		wprintf(L"ERROR: Invalid type: %s.\n", PrimitiveTypeReflectionWide[(ui16)type]);
+		Exit(ErrCodes::internal_compiler_error);
+	}
+};
 
 
 
@@ -315,24 +332,6 @@ namespace Body
 	{
 		visitedNodes.push_back(node);
 
-		const auto GetSizeFromType = [](const PrimitiveType t) -> ui16 {
-			switch (t)
-			{
-			case PrimitiveType::ui64:
-			case PrimitiveType::i64:
-				return 8;
-			case PrimitiveType::ui32:
-			case PrimitiveType::i32:
-				return 4;
-			case PrimitiveType::ui16:
-			case PrimitiveType::i16:
-				return 2;
-			default:
-				wprintf(L"ERROR: Invalid type: %hu.\n", t);
-				Exit(ErrCodes::internal_compiler_error);
-			}
-		};
-
 		// Get size from expression type.
 		const ui16 exprSize = GetSizeFromType(exprType);
 	
@@ -401,11 +400,16 @@ namespace Body
 		{
 			AST::IntNode* asIntNode = (AST::IntNode*)node;
 	
-			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, /* Change!!!!!!!--> */asIntNode->GetSize());
+			// Get size we need to allocate.
+			const ui16 sizeToAlloc = GetSizeFromType(exprType);
+
+			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, sizeToAlloc);
+
+			const std::string& reg = GetReg(RG::RAX, exprType);
 
 			std::string output = "\n; " + t0.name + " = " + std::to_string(asIntNode->Get()) +
 								 "\nmov " + RefTempVar(t0.place, exprType) + ", " + std::to_string(asIntNode->Get()) +
-								 "\nmov rax, " + RefTempVar(t0.place, exprType) + "\n"; // Also store result in rax.
+								 "\nmov " + reg + ", " + RefTempVar(t0.place, exprType) + "\n"; // Also store result in rax.
 			code += output;
 			// std::cerr << output;
 	
@@ -424,25 +428,29 @@ namespace Body
 				Exit(ErrCodes::undeclared_symbol);
 			}
 
-			// The temporary inherits its size from the symbol it is copying data from here.
-			//CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, entry->size);
-
-			// The temporary ínherits it's size from the exprType-param.
+			// The temporary inherits it's size from the exprType-param.
 			// If the local variable we're copying from is larger, truncation will happen here, and a warning will be issued.
+			// If the local variable we're copying from is smaller, we'll include values outside of the variable which happen to be there on the stack, and this will be even worse.
+			// TODO: The types might be the same size though, in which case this isn't a truncation. Split this out into two checks - One for signed-unsigned mismatch, the other for truncation.
 			if (exprType != entry->type)
 			{
-				wprintf(L"WARNING: Truncation when trying to copy %s into temporary.\n"\
+				wprintf(L"WARNING: Truncation or signed-unsigned mismatch when trying to copy %s into temporary.\n"\
 						L"Assignee has type %s, local var has type %s.\n",
 						entry->name.c_str(), PrimitiveTypeReflectionWide[(ui16)exprType], PrimitiveTypeReflectionWide[(ui16)entry->type]
 				);
+
+				code += "\n; WARNING - Truncation or signed-unsigned mismatch";
 			}
 
-			// Get correct register based on entry size.
-			//const std::string& reg = GetReg(RG::RAX, entry->type);
+			// The temporary inherits its size from the assignee(exprType param).
+			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
+
+			// Get correct register based on exprType.
+			const std::string& reg = GetReg(RG::RAX, exprType);
 
 			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->stackLocation) + ")" +
-								 "\nmov " + reg + ", " + RefLocalVar(entry->stackLocation) +
-								 "\nmov " + RefTempVar(t0.place) + ", " + reg + "\n";
+								 "\nmov " + reg + ", " + RefLocalVar(entry->stackLocation, exprType) +
+								 "\nmov " + RefTempVar(t0.place, exprType) + ", " + reg + "\n";
 
 			code += output;
 			// std::cerr << output;
@@ -522,7 +530,7 @@ namespace Body
 
 				// Store result (held in rax and on the temporaries-stack) in var.
 				std::string output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)" +
-									 "\nmov " + RefLocalVar(stackLocation) + ", rax\n";
+									 "\nmov " + RefLocalVar(stackLocation, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
 
 				code += output;
 				// std::cerr << output;
@@ -536,14 +544,20 @@ namespace Body
 				// The result of the expression we're about to evaluate is stored in rax by default,
 				// so we don't need to do anything more than ensure that the expression's code is generated.
 
-				code += "\n; Return expression:";
+				code += "\n; Return expression(Return i32!):";
 
 				// Generate operation code. Remember that the temporaries stack section needs to be reset!
 				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
-				GenOpNodeCode(code, asReturnNode->GetRetExpr(), t0);
+				// TODO: The type supplied here(s_defaultType/i32) will be too small to hold values gathered from ui64s/i64s.
+				// In the future, fix this by properly implementing functions, so we may stick it's return type here instead.
+				const PrimitiveType retType = TempVar::s_defaultType;
+				GenOpNodeCode(code, asReturnNode->GetRetExpr(), t0, retType);
 
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
 				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
+
+				// Add some padding.
+				code += "\n\n";
 
 				// Since we're returning, time to generate the epilogue.
 				CurrentFunctionMetaData::temporariesStackSectionSize = *largestTempAllocation;
