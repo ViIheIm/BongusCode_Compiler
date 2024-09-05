@@ -110,7 +110,6 @@ struct TempVar
 {
 	std::string name;
 	i32 place;
-	PrimitiveType type;
 };
 
 // Allocation is done in two steps. First we get the allocated space with AllocStackSpace(), then we call CommitLastStackAlloc().
@@ -127,8 +126,7 @@ inline static TempVar AllocStackSpace(i32* recordAllocs, bool resetHitCount = fa
 
 	std::string retStr("_t" + std::to_string(hitCount++));
 
-	// We don't know the type yet, so make sure to provide that later.
-	return { retStr, *recordAllocs, PrimitiveType::invalid };
+	return { retStr, *recordAllocs };
 }
 
 // This is where we commit the last allocation made with AllocStackSpace().
