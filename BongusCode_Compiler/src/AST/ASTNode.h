@@ -78,7 +78,6 @@ namespace AST
 		IntNode() = default;
 		virtual ~IntNode() override = default;
 		inline const ui64 Get(void) const { return n; }
-		constexpr ui16 GetSize(void) const { return 8; }	// TODO: This size might need to be readjusted later.
 		friend Node* MakeIntNode(i32);
 
 	private:
