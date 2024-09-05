@@ -431,8 +431,10 @@ namespace Body
 			// If the local variable we're copying from is larger, truncation will happen here, and a warning will be issued.
 			if (exprType != entry->type)
 			{
-				// TODO: Maybe add string arrays which will yield: primTypes[PrimitiveType::ui64] -> "ui64" for a better error code here.
-				wprintf(L"WARNING: Truncation when trying to copy %s into temporary.\nAssignee has type %hu, local var has type %hu.\n", exprType, entry->type);
+				wprintf(L"WARNING: Truncation when trying to copy %s into temporary.\n"\
+						L"Assignee has type %s, local var has type %s.\n",
+						entry->name.c_str(), PrimitiveTypeReflectionWide[(ui16)exprType], PrimitiveTypeReflectionWide[(ui16)entry->type]
+				);
 			}
 
 			// Get correct register based on entry size.

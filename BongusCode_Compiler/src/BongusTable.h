@@ -56,7 +56,7 @@ enum class PrimitiveType : ui16
 	i64
 };
 
-// Maintain parity!
+// Maintain parity! TODO: Maybe stick all three in a macro
 inline const char* PrimitiveTypeReflectionNarrow[] = {
 	"invalid",
 
