@@ -110,6 +110,8 @@ struct TempVar
 {
 	std::string name;
 	i32 place;
+
+	static const PrimitiveType s_defaultType = PrimitiveType::i32;
 };
 
 // Allocation is done in two steps. First we get the allocated space with AllocStackSpace(), then we call CommitLastStackAlloc().
@@ -453,8 +455,10 @@ namespace Body
 		{
 			case Node_k::OpNode:
 			{
+				// This is just a lone op node without assignment, but we'll perform the evaluation.
+				// Because of this, we're supplying the default type.
 				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
-				GenOpNodeCode(code, node, t0);
+				GenOpNodeCode(code, node, t0, TempVar::s_defaultType);
 				
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
 				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
