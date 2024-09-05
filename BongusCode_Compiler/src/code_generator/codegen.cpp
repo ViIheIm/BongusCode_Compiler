@@ -344,36 +344,36 @@ namespace Body
 			std::string opString = asOpNode->GetOpAsString();
 	
 
-			GenOpNodeCode(code, asOpNode->GetLHS(), t0);
+			GenOpNodeCode(code, asOpNode->GetLHS(), t0, exprType);
 	
 			//auto [t1, t1place] = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
 			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
-			GenOpNodeCode(code, asOpNode->GetRHS(), t1);
+			GenOpNodeCode(code, asOpNode->GetRHS(), t1, exprType);
 	
 			if (opString == "+")
 			{
 				std::string output = "\n; " + t0.name + " += " + t1.name +
-									 "\nmov rax, " + RefTempVar(t0.place) +		// Store _tfirst in eax
-									 "\nadd rax, " + RefTempVar(t1.place) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.place) + ", rax\n";	// Store result in _tfirst on stack
+									 "\nmov rax, " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
+									 "\nadd rax, " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.place, exprType) + ", rax\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
 			if (opString == "-")
 			{
 				std::string output = "\n; " + t0.name + " -= " + t1.name +
-									 "\nmov rax, " + RefTempVar(t0.place) +		// Store _tfirst in eax
-									 "\nsub rax, " + RefTempVar(t1.place) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.place) + ", rax\n";	// Store result in _tfirst on stack
+									 "\nmov rax, " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
+									 "\nsub rax, " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.place, exprType) + ", rax\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
 			else if (opString == "*")
 			{
 				std::string output = "\n; " + t0.name + " *= " + t1.name +
-									 "\nmov rax, " + RefTempVar(t0.place) +		// Store _tfirst in eax
-									 "\nimul rax, " + RefTempVar(t1.place) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.place) + ", rax\n";	// Store result in _tfirst on stack
+									 "\nmov rax, " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
+									 "\nimul rax, " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.place, exprType) + ", rax\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
@@ -384,13 +384,13 @@ namespace Body
 				// TLDR: For 64 bit division, the result goes in rax, the remainder in rdx
 				// The divisor goes in rbx.
 				std::string output = "\n; " + t0.name + " /= " + t1.name +
-									 "\nmov rax, " + RefTempVar(t0.place) +		// Store _tfirst in eax
-									 "\nmov rbx, " + RefTempVar(t1.place) +		// Store divisor in rbx
-									 "\nxor rdx, rdx" +							// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
-									 "\ndiv rbx" +								// Perform operation in ebx
-									 "\nmov rbx, 3405691582 ; 0xCAFEBABE" +		// Store sentinel value CAFEBABE in rbx in case of bugs.
-									 "\nmov rdx, 4276993775 ; 0xFEEDBEEF" +		// Do the same for rdx with FEEDBEEF since it was also used.
-									 "\nmov " + RefTempVar(t0.place) + ", rax\n";	// Store result in _tfirst on stack
+									 "\nmov rax, " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
+									 "\nmov rbx, " + RefTempVar(t1.place, exprType) +		// Store divisor in rbx
+									 "\nxor rdx, rdx" +										// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
+									 "\ndiv rbx" +											// Perform operation in ebx
+									 "\nmov rbx, 3405691582 ; 0xCAFEBABE" +					// Store sentinel value CAFEBABE in rbx in case of bugs.
+									 "\nmov rdx, 4276993775 ; 0xFEEDBEEF" +					// Do the same for rdx with FEEDBEEF since it was also used.
+									 "\nmov " + RefTempVar(t0.place, exprType) + ", rax\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
@@ -404,8 +404,8 @@ namespace Body
 			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, /* Change!!!!!!!--> */asIntNode->GetSize());
 
 			std::string output = "\n; " + t0.name + " = " + std::to_string(asIntNode->Get()) +
-								 "\nmov " + RefTempVar(t0.place) + ", " + std::to_string(asIntNode->Get()) +
-								 "\nmov rax, " + RefTempVar(t0.place) + "\n"; // Also store result in rax.
+								 "\nmov " + RefTempVar(t0.place, exprType) + ", " + std::to_string(asIntNode->Get()) +
+								 "\nmov rax, " + RefTempVar(t0.place, exprType) + "\n"; // Also store result in rax.
 			code += output;
 			// std::cerr << output;
 	
@@ -425,10 +425,18 @@ namespace Body
 			}
 
 			// The temporary inherits its size from the symbol it is copying data from here.
-			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, entry->size);
+			//CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, entry->size);
+
+			// The temporary ínherits it's size from the exprType-param.
+			// If the local variable we're copying from is larger, truncation will happen here, and a warning will be issued.
+			if (exprType != entry->type)
+			{
+				// TODO: Maybe add string arrays which will yield: primTypes[PrimitiveType::ui64] -> "ui64" for a better error code here.
+				wprintf(L"WARNING: Truncation when trying to copy %s into temporary.\nAssignee has type %hu, local var has type %hu.\n", exprType, entry->type);
+			}
 
 			// Get correct register based on entry size.
-			const std::string& reg = GetReg(RG::RAX, entry->type);
+			//const std::string& reg = GetReg(RG::RAX, entry->type);
 
 			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->stackLocation) + ")" +
 								 "\nmov " + reg + ", " + RefLocalVar(entry->stackLocation) +
