@@ -96,7 +96,7 @@ namespace CurrentFunctionMetaData
 	i32 temporariesStackSectionSize = 0;
 
 	// TODO: Get this name from a function head node when you finally integrate functions.
-	static std::string funcName("BingBingBong");
+	static std::string funcName("main");
 }
 
 ui32 AllocLocals(AST::Node* funcHeadNode)
