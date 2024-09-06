@@ -352,30 +352,32 @@ namespace Body
 			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
 			GenOpNodeCode(code, asOpNode->GetRHS(), t1, exprType);
 	
+			const std::string& RAX = GetReg(RG::RAX, exprType);
+
 			if (opString == "+")
 			{
 				std::string output = "\n; " + t0.name + " += " + t1.name +
-									 "\nmov rax, " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
-									 "\nadd rax, " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", rax\n";	// Store result in _tfirst on stack
+									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
+									 "\nadd " + RAX + ", " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.place, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
 			if (opString == "-")
 			{
 				std::string output = "\n; " + t0.name + " -= " + t1.name +
-									 "\nmov rax, " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
-									 "\nsub rax, " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", rax\n";	// Store result in _tfirst on stack
+									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
+									 "\nsub " + RAX + ", " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.place, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
 			else if (opString == "*")
 			{
 				std::string output = "\n; " + t0.name + " *= " + t1.name +
-									 "\nmov rax, " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
-									 "\nimul rax, " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", rax\n";	// Store result in _tfirst on stack
+									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
+									 "\nimul " + RAX + ", " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.place, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
@@ -385,14 +387,17 @@ namespace Body
 				// https://www.youtube.com/watch?v=vwTYM0oSwjg
 				// TLDR: For 64 bit division, the result goes in rax, the remainder in rdx
 				// The divisor goes in rbx.
+				const std::string& RBX = GetReg(RG::RBX, exprType);
+				const std::string& RDX = GetReg(RG::RDX, exprType);
+
 				std::string output = "\n; " + t0.name + " /= " + t1.name +
-									 "\nmov rax, " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
-									 "\nmov rbx, " + RefTempVar(t1.place, exprType) +		// Store divisor in rbx
-									 "\nxor rdx, rdx" +										// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
-									 "\ndiv rbx" +											// Perform operation in ebx
-									 "\nmov rbx, 3405691582 ; 0xCAFEBABE" +					// Store sentinel value CAFEBABE in rbx in case of bugs.
-									 "\nmov rdx, 4276993775 ; 0xFEEDBEEF" +					// Do the same for rdx with FEEDBEEF since it was also used.
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", rax\n";	// Store result in _tfirst on stack
+									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +	// Store _tfirst in eax
+									 "\nmov " + RBX + ", " + RefTempVar(t1.place, exprType) +	// Store divisor in rbx
+									 "\nxor " + RDX + ", " + RDX +								// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
+									 "\ndiv " + RBX +											// Perform operation in ebx
+									 "\nmov " + RBX + ", 3405691582 ; 0xCAFEBABE" +				// Store sentinel value CAFEBABE in rbx in case of bugs.
+									 "\nmov " + RDX + ", 4276993775 ; 0xFEEDBEEF" +				// Do the same for rdx with FEEDBEEF since it was also used.
+									 "\nmov " + RefTempVar(t0.place, exprType) + ", rax\n";		// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
@@ -409,11 +414,11 @@ namespace Body
 
 			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
 
-			const std::string& reg = GetReg(RG::RAX, exprType);
+			const std::string& RAX = GetReg(RG::RAX, exprType);
 
 			std::string output = "\n; " + t0.name + " = " + std::to_string(asIntNode->Get()) +
 								 "\nmov " + RefTempVar(t0.place, exprType) + ", " + std::to_string(asIntNode->Get()) +
-								 "\nmov " + reg + ", " + RefTempVar(t0.place, exprType) + "\n"; // Also store result in rax.
+								 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) + "\n"; // Also store result in rax.
 			code += output;
 			// std::cerr << output;
 	
