@@ -43,7 +43,7 @@
 
 
 %union {
-	int num;
+	unsigned long long int num;
 	// const wchar_t* str;
 	std::wstring* str;
 	AST::Node* ASTNode;

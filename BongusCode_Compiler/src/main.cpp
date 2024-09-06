@@ -55,9 +55,8 @@ inline static void TryRunProgram(void);
 
 i32 main(i32 argc, char** argv)
 {
-	// Print out all command line args for debugging, and working directory.
+	// Print out all command line args for debugging.
 #ifdef _DEBUG
-	Utils::PrintCurrentWorkingDirectory();
 	for (i32 i = 0; i < argc; i++)
 	{
 		printf("arg %i: %s\n", i, argv[i]);

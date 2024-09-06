@@ -73,40 +73,24 @@ AST::Node* AST::MakeDeclNode(std::wstring* s, PrimitiveType type)
         break;
     }
     case PrimitiveType::ui8:
-    {
-        node->size = 1;
-        break;
-    }
     case PrimitiveType::i8:
     {
         node->size = 1;
         break;
     }
     case PrimitiveType::ui16:
-    {
-        node->size = 2;
-        break;
-    }
     case PrimitiveType::i16:
     {
         node->size = 2;
         break;
     }
     case PrimitiveType::ui32:
-    {
-        node->size = 4;
-        break;
-    }
     case PrimitiveType::i32:
     {
         node->size = 4;
         break;
     }
     case PrimitiveType::ui64:
-    {
-        node->size = 8;
-        break;
-    }
     case PrimitiveType::i64:
     {
         node->size = 8;
@@ -135,11 +119,6 @@ AST::Node* AST::MakeReturnNode(Node* retExpr)
 {
     ReturnNode* node = new ReturnNode();
     assert(node && "Failed to allocate return node");
-
-    if (retExpr->GetNodeKind() != Node_k::OpNode)
-    {
-        wprintf(L"WARNING: Return expression supplied to Return Node in " __FUNCSIG__ " is not an op node.\nThe ReturnNode::retExpr should always be an opnode.\n");
-    }
     node->retExpr = retExpr;
     node->kind = Node_k::ReturnNode;
     return node;

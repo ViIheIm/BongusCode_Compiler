@@ -55,3 +55,36 @@ enum class PrimitiveType : ui16
 	ui64,
 	i64
 };
+
+// Maintain parity! TODO: Maybe stick all three in an x-macro
+inline const char* PrimitiveTypeReflectionNarrow[] = {
+	"invalid",
+
+	"ui8",
+	"i8",
+
+	"ui16",
+	"i16",
+
+	"ui32",
+	"i32",
+
+	"ui64",
+	"i64"
+};
+
+inline const wchar_t* PrimitiveTypeReflectionWide[] = {
+	L"invalid",
+	
+	L"ui8",
+	L"i8",
+	
+	L"ui16",
+	L"i16",
+	
+	L"ui32",
+	L"i32",
+	
+	L"ui64",
+	L"i64"
+};
