@@ -207,7 +207,7 @@ int yy::Lexer::lex(yy::parser::semantic_type& yylval, yy::location& yylloc)
 	LEXLOG(L"Found NUM_LIT: %s\n", wstr().c_str());
 
 	// Set yylval to integer value wrought from the input string.
-	yylval.num = std::stoi(wstr());
+	yylval.num = std::stoll(wstr());
 
 	return BTok::NUM_LIT;
 
