@@ -391,13 +391,13 @@ namespace Body
 				const std::string& RDX = GetReg(RG::RDX, exprType);
 
 				std::string output = "\n; " + t0.name + " /= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +	// Store _tfirst in eax
-									 "\nmov " + RBX + ", " + RefTempVar(t1.place, exprType) +	// Store divisor in rbx
-									 "\nxor " + RDX + ", " + RDX +								// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
-									 "\ndiv " + RBX +											// Perform operation in ebx
-									 "\nmov " + RBX + ", 3405691582 ; 0xCAFEBABE" +				// Store sentinel value CAFEBABE in rbx in case of bugs.
-									 "\nmov " + RDX + ", 4276993775 ; 0xFEEDBEEF" +				// Do the same for rdx with FEEDBEEF since it was also used.
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", rax\n";		// Store result in _tfirst on stack
+									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
+									 "\nmov " + RBX + ", " + RefTempVar(t1.place, exprType) +		// Store divisor in rbx
+									 "\nxor " + RDX + ", " + RDX +									// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
+									 "\ndiv " + RBX +												// Perform operation in ebx
+									 "\nmov " + RBX + ", 3405691582 ; 0xCAFEBABE" +					// Store sentinel value CAFEBABE in rbx in case of bugs.
+									 "\nmov " + RDX + ", 4276993775 ; 0xFEEDBEEF" +					// Do the same for rdx with FEEDBEEF since it was also used.
+									 "\nmov " + RefTempVar(t0.place, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
