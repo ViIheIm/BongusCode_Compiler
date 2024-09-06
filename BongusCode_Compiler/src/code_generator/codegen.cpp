@@ -451,11 +451,22 @@ namespace Body
 
 			// One version of the register is for when we get the local variable into rax,
 			// and the other is for when we export the value from rax into the temporary.
-			const std::string& readReg = GetReg(RG::RAX, smallestType);
+			std::string readReg(GetReg(RG::RAX, smallestType));
 			const std::string& writeReg = GetReg(RG::RAX, exprType);
 
-			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->stackLocation) + ")" +
-								 "\nmov " + readReg + ", " + RefLocalVar(entry->stackLocation, smallestType) +
+
+			// If the local variable we're moving into rax is 2 bytes in size(ui16/i16), we need to zero extend it.
+			// If this is the case, readReg must also be changed from AX to RAX, so this ugly hackaround does that to.
+			// TODO: Refactor this.
+			std::string movToRaxOp("mov ");
+			if (entry->type == PrimitiveType::ui16 || entry->type == PrimitiveType::i16)
+			{
+				movToRaxOp = "movzx ";
+				readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
+			}
+
+			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->stackLocation) + ")\n" +
+								 movToRaxOp + readReg + ", " + RefLocalVar(entry->stackLocation, smallestType) +
 								 "\nmov " + RefTempVar(t0.place, exprType) + ", " + writeReg + "\n";
 
 			code += output;
