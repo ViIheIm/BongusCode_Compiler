@@ -94,6 +94,9 @@ namespace CurrentFunctionMetaData
 	// This is the amount our temporaries consume.
 	// varsStackSectionSize + temporariesStackSectionSize = total stack size
 	i32 temporariesStackSectionSize = 0;
+
+	// TODO: Get this name from a function head node when you finally integrate functions.
+	static std::string funcName("BingBingBong");
 }
 
 ui32 AllocLocals(AST::Node* funcHeadNode)
@@ -165,8 +168,8 @@ namespace Prologue
 {
 	inline static void WriteFunctionNameProc(std::string& code)
 	{
-		code += "; TODO: Hard coded name, bad!\n"\
-				"main PROC\n";
+		code += "; TODO: Hard coded name, bad!\n" +
+				CurrentFunctionMetaData::funcName + " PROC\n";
 	}
 	
 	inline static void SetupStackFrame(std::string& code)
@@ -199,8 +202,8 @@ namespace Epilogue
 {
 	inline static void WriteFunctionNameEndp(std::string& code)
 	{
-		code += "; TODO: Hard coded name, bad!\n"\
-				"main ENDP\n";
+		code += "; TODO: Hard coded name, bad!\n" +
+				CurrentFunctionMetaData::funcName + " ENDP\n";
 	}
 
 	inline static void RestoreStackFrame(std::string& code)
