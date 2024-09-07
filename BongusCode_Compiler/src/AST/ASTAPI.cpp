@@ -124,12 +124,27 @@ AST::Node* AST::MakeReturnNode(Node* retExpr)
     return node;
 }
 
-template<PrimitiveType... args>
-AST::Node* AST::MakeFunctionNode()
+AST::Node* AST::MakeFunctionNode(std::wstring* s, PrimitiveType retType, Node* argsListNode)
 {
     FunctionNode* node = new FunctionNode();
     assert(node && "Failed to allocate function node");
     node->kind = Node_k::FunctionNode;
+    node->name = *s;
+    node->retType = retType;
+    node->argsList = argsListNode;
+
+    // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
+    delete s;
+
+    return node;
+}
+
+template<PrimitiveType... args>
+AST::Node* AST::MakeArgsListNode()
+{
+    ArgsListNode* node = new ArgsListNode();
+    assert(node && "Failed to allocate args list node");
+    node->kind = Node_k::ArgsListNode;
 
     // Fold expressions are so cool!
     ((node->argsList.push_back(args)), ...);

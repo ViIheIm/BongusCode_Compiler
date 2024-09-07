@@ -17,7 +17,8 @@ enum class Node_k : ui16
 	ScopeNode,
 	DeclNode,
 	ReturnNode,
-	FunctionNode
+	FunctionNode,
+	ArgsListNode
 };
 
 namespace AST
@@ -213,9 +214,29 @@ namespace AST
 
 		FunctionNode() = default;
 		virtual ~FunctionNode() override = default;
-		inline const std::vector<PrimitiveType>& GetArgsList(void) const { return argsList; }
+		virtual std::vector<Node*> GetChildren(void) override;
+		inline const std::wstring& GetName(void) const { return name; }
+		inline Node* GetArgsList(void) const { return argsList; }
+		friend Node* MakeFunctionNode(std::wstring*, PrimitiveType, Node*);
+
+	private:
+
+		std::wstring name;
+		PrimitiveType retType;
+		Node* argsList;
+	};
+
+	// Represents a list of args.
+	class ArgsListNode : public Node
+	{
+	public:
+
+		ArgsListNode() = default;
+		virtual ~ArgsListNode() override = default;
+		inline const std::vector<PrimitiveType>& GetList(void) const { return argsList; }
+		
 		template <PrimitiveType...>
-		friend Node* MakeFunctionNode();
+		friend Node* MakeArgsListNode();
 
 	private:
 
