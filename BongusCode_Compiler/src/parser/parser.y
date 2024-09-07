@@ -78,6 +78,9 @@
 
 %token SEMI
 
+%type<ASTNode> functions
+%type<ASTNode> function
+%type<ASTNode> functionHead
 %type<ASTNode> scopes
 %type<ASTNode> scope
 
@@ -98,8 +101,17 @@
 %%
 // AST construction with semantic actions on page 259.
 
-program: scopes						{ g_nodeHead = AST::MakeNullNode(); g_nodeHead->AdoptChildren($1); }
+program: functions					{ g_nodeHead = AST::MakeNullNode(); g_nodeHead->AdoptChildren($1); }
 	   ;
+
+functions: functions function		{ $$ = $1->MakeSiblings($2); }
+		 | function
+		 ;
+
+function: functionHead scope		{ $$ = $1->AdoptChildren($2); }
+		;
+
+functionHead
 
 scopes: scopes scope				{ $$ = $1->MakeSiblings($2); }
 	  | scope
