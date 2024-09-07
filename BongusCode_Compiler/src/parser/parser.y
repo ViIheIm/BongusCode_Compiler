@@ -81,6 +81,8 @@
 %type<ASTNode> functions
 %type<ASTNode> function
 %type<ASTNode> functionHead
+%type<ASTNode> paramList
+
 %type<ASTNode> scopes
 %type<ASTNode> scope
 
@@ -111,7 +113,10 @@ functions: functions function		{ $$ = $1->MakeSiblings($2); }
 function: functionHead scope		{ $$ = $1->AdoptChildren($2); }
 		;
 
-functionHead
+functionHead: type ID paramList		{ $$ = AST::MakeFunctionNode($1, $2, $3); }
+			;
+
+paramList: 
 
 scopes: scopes scope				{ $$ = $1->MakeSiblings($2); }
 	  | scope
