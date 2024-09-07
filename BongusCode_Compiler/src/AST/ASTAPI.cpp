@@ -124,6 +124,19 @@ AST::Node* AST::MakeReturnNode(Node* retExpr)
     return node;
 }
 
+template<PrimitiveType... args>
+AST::Node* AST::MakeFunctionNode()
+{
+    FunctionNode* node = new FunctionNode();
+    assert(node && "Failed to allocate function node");
+    node->kind = Node_k::FunctionNode;
+
+    // Fold expressions are so cool!
+    ((node->argsList.push_back(args)), ...);
+
+    return node;
+}
+
 AST::Node* AST::MakeNullNode()
 {
     Node* node = new Node();

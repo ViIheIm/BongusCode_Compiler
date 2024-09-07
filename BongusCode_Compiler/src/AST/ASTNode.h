@@ -16,7 +16,8 @@ enum class Node_k : ui16
 	AssNode,
 	ScopeNode,
 	DeclNode,
-	ReturnNode
+	ReturnNode,
+	FunctionNode
 };
 
 namespace AST
@@ -203,5 +204,21 @@ namespace AST
 		// Should always be an opnode, but this is enforced(warned about if it is not adhered to) in the makenode-function.
 		Node* retExpr;
 
+	};
+
+	// Represents an entire function. The node is it's head, and it's children the body.
+	class FunctionNode : public Node
+	{
+	public:
+
+		FunctionNode() = default;
+		virtual ~FunctionNode() override = default;
+		inline const std::vector<PrimitiveType>& GetArgsList(void) const { return argsList; }
+		template <PrimitiveType...>
+		friend Node* MakeFunctionNode();
+
+	private:
+
+		std::vector<PrimitiveType> argsList;
 	};
 }
