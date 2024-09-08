@@ -40,10 +40,10 @@ namespace AST
 	Node* MakeReturnNode(Node* retExpr);
 
 	// makeNode(name, ret_t, argsList) instantiates a function head node.
-	Node* MakeFunctionNode(std::wstring* s, PrimitiveType retType, Node* argsListNode);
+	Node* MakeFunctionNode(PrimitiveType retType, std::wstring* s, Node* argsListNode);
 
 	// makeNode(Symbol name, Type type) instantiates a node for an argument list.
-	Node* MakeArgNode(std::wstring* s, PrimitiveType type);
+	Node* MakeArgNode(PrimitiveType type, std::wstring* s);
 
 	// makeNullNode() instantiates a null node that explicitly represents the
 	// absence of structure.For consistency in processing an AST, it is better to

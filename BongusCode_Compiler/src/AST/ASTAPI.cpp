@@ -124,13 +124,15 @@ AST::Node* AST::MakeReturnNode(Node* retExpr)
     return node;
 }
 
-AST::Node* AST::MakeFunctionNode(std::wstring* s, PrimitiveType retType, Node* argsListNode)
+AST::Node* AST::MakeFunctionNode(PrimitiveType retType, std::wstring* s, Node* argsListNode)
 {
     FunctionNode* node = new FunctionNode();
     assert(node && "Failed to allocate function node");
     node->kind = Node_k::FunctionNode;
     node->name = *s;
     node->retType = retType;
+
+    // In the case of a Nihil arg (e.g. i32 main(Nihil)), argsListNode will be nullptr, so that is perfectly valid behaviour.
     node->argsList = argsListNode;
 
     // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
@@ -139,12 +141,13 @@ AST::Node* AST::MakeFunctionNode(std::wstring* s, PrimitiveType retType, Node* a
     return node;
 }
 
-AST::Node* AST::MakeArgNode(std::wstring* s, PrimitiveType type)
+AST::Node* AST::MakeArgNode(PrimitiveType type, std::wstring* s)
 {
     ArgNode* node = new ArgNode();
     assert(node && "Failed to allocate arg node");
     node->c = *s;
     node->kind = Node_k::ArgNode;
+    node->type = type;
 
     // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
     delete s;

@@ -216,13 +216,16 @@ namespace AST
 		virtual ~FunctionNode() override = default;
 		virtual std::vector<Node*> GetChildren(void) override;
 		inline const std::wstring& GetName(void) const { return name; }
+		inline const PrimitiveType GetRetType(void) const { return retType; }
 		inline Node* GetArgsList(void) const { return argsList; }
-		friend Node* MakeFunctionNode(std::wstring*, PrimitiveType, Node*);
+		friend Node* MakeFunctionNode(PrimitiveType, std::wstring*, Node*);
 
 	private:
 
 		std::wstring name;
 		PrimitiveType retType;
+
+		// argsList is possibly null, in which case the function has a single 'Nihil' in the parameter list, e.g. "i32 main(Nihil)".
 		Node* argsList;
 	};
 
@@ -235,7 +238,7 @@ namespace AST
 		virtual ~ArgNode() override = default;
 		inline const std::wstring& GetName(void) const { return c; }
 		inline const PrimitiveType GetType(void) const { return type; }
-		friend Node* MakeArgNode(std::wstring*, PrimitiveType);
+		friend Node* MakeArgNode(PrimitiveType, std::wstring*);
 
 	private:
 
