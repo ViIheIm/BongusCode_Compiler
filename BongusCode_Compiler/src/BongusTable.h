@@ -43,6 +43,8 @@ enum class PrimitiveType : ui16
 {
 	invalid,
 
+	nihil,
+
 	ui8,
 	i8,
 

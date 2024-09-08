@@ -52,6 +52,7 @@
 %token <str> ID
 %token <num> NUM_LIT
 
+%token KWD_NIHIL
 %token KWD_UI8
 %token KWD_I8
 %token KWD_UI16
@@ -112,14 +113,15 @@ functions: functions function		{ $$ = $1->MakeSiblings($2); }
 		 | function
 		 ;
 
-function: functionHead scope		{ $$ = $1->AdoptChildren($2); }
+function: functionHead scope		{ $$ = $1; $1->AdoptChildren($2); }
 		;
 
-functionHead: type ID paramList		{ $$ = AST::MakeFunctionNode($1, $2, $3); }
+functionHead: type ID LPAREN paramList RPAREN		{ $$ = AST::MakeFunctionNode($1, $2, $4); }
 			;
 
-paramList: paramList COMMA param	{ $$ = $1->MakeSiblings($3); }
+paramList: paramList COMMA param	{ $1->MakeSiblings($3); $$ = $1; }
 		 | param
+		 | KWD_NIHIL				{ $$ = nullptr; }
 		 ;
 
 param: type ID						{ $$ = AST::MakeArgNode($1, $2); }
@@ -127,7 +129,7 @@ param: type ID						{ $$ = AST::MakeArgNode($1, $2); }
 //!Functions ---------------------------------------------------------------------------------
 
 
-scopes: scopes scope				{ $$ = $1->MakeSiblings($2); }
+scopes: scopes scope				{ $1->MakeSiblings($2); $$ = $1; }
 	  | scope
 	  ;
 
@@ -178,6 +180,8 @@ type: KWD_UI16						{ $$ = PrimitiveType::ui16; }
 
 	| KWD_UI64						{ $$ = PrimitiveType::ui64; }
 	| KWD_I64						{ $$ = PrimitiveType::i64;	}
+
+	| KWD_NIHIL						{ wprintf(L"ERROR: A variable may not be of type nihil.\n"); Exit(ErrCodes::unknown_type); }
 	;
 //!Variable declaration -----------------------------------------------------------------------
 
