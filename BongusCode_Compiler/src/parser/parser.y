@@ -75,8 +75,8 @@
 %token LCURLY
 %token RCURLY
 
-
 %token SEMI
+%token COMMA
 
 %type<ASTNode> functions
 %type<ASTNode> function
