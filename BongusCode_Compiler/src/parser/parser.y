@@ -82,6 +82,7 @@
 %type<ASTNode> function
 %type<ASTNode> functionHead
 %type<ASTNode> paramList
+%type<ASTNode> param
 
 %type<ASTNode> scopes
 %type<ASTNode> scope
@@ -103,6 +104,7 @@
 %%
 // AST construction with semantic actions on page 259.
 
+// Functions ---------------------------------------------------------------------------------
 program: functions					{ g_nodeHead = AST::MakeNullNode(); g_nodeHead->AdoptChildren($1); }
 	   ;
 
@@ -116,7 +118,14 @@ function: functionHead scope		{ $$ = $1->AdoptChildren($2); }
 functionHead: type ID paramList		{ $$ = AST::MakeFunctionNode($1, $2, $3); }
 			;
 
-paramList: 
+paramList: paramList COMMA param	{ $$ = $1->MakeSiblings($3); }
+		 | param
+		 ;
+
+param: type ID						{ $$ = AST::MakeArgNode($1, $2); }
+	 ;
+//!Functions ---------------------------------------------------------------------------------
+
 
 scopes: scopes scope				{ $$ = $1->MakeSiblings($2); }
 	  | scope
