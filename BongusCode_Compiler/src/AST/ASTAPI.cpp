@@ -139,15 +139,15 @@ AST::Node* AST::MakeFunctionNode(std::wstring* s, PrimitiveType retType, Node* a
     return node;
 }
 
-template<PrimitiveType... args>
-AST::Node* AST::MakeArgsListNode()
+AST::Node* AST::MakeArgNode(std::wstring* s, PrimitiveType type)
 {
-    ArgsListNode* node = new ArgsListNode();
-    assert(node && "Failed to allocate args list node");
-    node->kind = Node_k::ArgsListNode;
+    ArgNode* node = new ArgNode();
+    assert(node && "Failed to allocate arg node");
+    node->c = *s;
+    node->kind = Node_k::ArgNode;
 
-    // Fold expressions are so cool!
-    ((node->argsList.push_back(args)), ...);
+    // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
+    delete s;
 
     return node;
 }

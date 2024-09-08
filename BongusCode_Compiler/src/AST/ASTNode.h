@@ -18,7 +18,7 @@ enum class Node_k : ui16
 	DeclNode,
 	ReturnNode,
 	FunctionNode,
-	ArgsListNode
+	ArgNode
 };
 
 namespace AST
@@ -226,20 +226,20 @@ namespace AST
 		Node* argsList;
 	};
 
-	// Represents a list of args.
-	class ArgsListNode : public Node
+	// Represents a single argument in an argument list. The list itself is made by using rSiblings. Not much different to SymNodes yet.
+	class ArgNode : public Node
 	{
 	public:
 
-		ArgsListNode() = default;
-		virtual ~ArgsListNode() override = default;
-		inline const std::vector<PrimitiveType>& GetList(void) const { return argsList; }
-		
-		template <PrimitiveType...>
-		friend Node* MakeArgsListNode();
+		ArgNode() = default;
+		virtual ~ArgNode() override = default;
+		inline const std::wstring& GetName(void) const { return c; }
+		inline const PrimitiveType GetType(void) const { return type; }
+		friend Node* MakeArgNode(std::wstring*, PrimitiveType);
 
 	private:
 
-		std::vector<PrimitiveType> argsList;
+		std::wstring c;
+		PrimitiveType type;
 	};
 }
