@@ -3,10 +3,94 @@
 #include "../AST/ASTAPI.h"
 #include "../symbol_table/symtable.h"
 #include "../Exit.h"
+#include "../CStrLib.h"
+#include "../Utils.h"
+#include <cassert>
 
 /*
 	TODO: Integrate function name mangler from sandbox!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 */
+
+
+/*
+	Name mangling in bonguscode is like how most C-compilers mangle their names.
+	Firstly, we prepend an underscore.
+	Secondly, and this is the more involved operation;
+	In the case of unicode characters, we expand out the unicode character
+	into a string of it's hex value.
+*/
+constexpr ui16 hexExpansionAmount = 4;
+
+inline static void Mangle(wchar_t* outStr, const ui16 newStrLen)
+{
+	const ui16 newStrByteLen = sizeof(wchar_t) * newStrLen;
+
+	wchar_t* tempMem = (wchar_t*)malloc(newStrByteLen);
+	ZeroMem(tempMem, newStrByteLen);
+
+	// Start by prepending an underscore.
+	wcscpy(tempMem, outStr);
+	*outStr = L'_';
+
+	// Copy everything back.
+	wcscpy(outStr + 1, tempMem);
+
+	// Clear tempMem.
+	ZeroMem(tempMem, newStrByteLen);
+
+
+	for (wchar_t* c = outStr; *c != 0; c++)
+	{
+		// Only mangle unicode characters.
+		if (IsUnicode(*c))
+		{
+			// Copy over everything after c to tempMem.
+			wcscpy(tempMem, c + 1);
+
+			swprintf(c, L"%.*X", hexExpansionAmount, *c);
+
+			// Copy everything after c back.
+			wcscpy(c + hexExpansionAmount, tempMem);
+
+			// Clear tempMem.
+			ZeroMem(tempMem, newStrByteLen);
+
+			// We're not iterating c here because if it's at the end of the string, and there's a unicode character there, it will skip past said character.
+			// Besides, no character we just wrote will be a unicode character, so it's safe to reread characters we just wrote.
+		}
+	}
+}
+
+inline static char* MangleFunctionName(const wchar_t* wstr)
+{
+	// Figure out new size, taking unicode character expansion into account.
+	// It's defaulted to 1 to take leading underscore into account.
+	ui16 newStrLen = 1;
+	for (const wchar_t* c = wstr; *c != 0; c++)
+	{
+		if (IsUnicode(*c))
+		{
+			newStrLen += hexExpansionAmount;
+		}
+		else
+		{
+			newStrLen += 1;
+		}
+	}
+	// Add size for null terminator.
+	newStrLen += 1;
+
+	wchar_t* expandedWideStr = (wchar_t*)malloc(sizeof(wchar_t) * newStrLen);
+	ZeroMem(expandedWideStr, sizeof(wchar_t) * newStrLen);
+	wcscpy(expandedWideStr, wstr);
+	Mangle(expandedWideStr, newStrLen);
+	char* narrowedStr = (char*)malloc(sizeof(char) * newStrLen);
+	NarrowWideString(expandedWideStr, newStrLen, narrowedStr);
+	free(expandedWideStr);
+
+	return narrowedStr;
+}
 
 namespace Registers
 {
@@ -95,8 +179,16 @@ namespace CurrentFunctionMetaData
 	// varsStackSectionSize + temporariesStackSectionSize = total stack size
 	i32 temporariesStackSectionSize = 0;
 
-	// TODO: Get this name from a function head node when you finally integrate functions.
-	static std::string funcName("main");
+	static std::string funcName("NO_NAME_ASSIGNED");
+}
+
+// This uses pointers instead of modifying the above namespace's globals directly, so we can easily swap out where the metadata
+// will be stored in the future.
+inline static void ResetFunctionMetaData(i32* varsStackSectionSize, i32* temporariesStackSectionSize, std::string* funcName)
+{
+	*varsStackSectionSize = 0;
+	*temporariesStackSectionSize = 0;
+	*funcName = std::string("NO_NAME_ASSIGNED");
 }
 
 ui32 AllocLocals(AST::Node* funcHeadNode)
@@ -166,10 +258,12 @@ inline static const ui16 GetSizeFromType(const PrimitiveType type)
 
 namespace Prologue
 {
-	inline static void WriteFunctionNameProc(std::string& code)
+	inline static void WriteFunctionNameProc(std::string& code, const std::string& functionName)
 	{
-		code += "; TODO: Hard coded name, bad!\n" +
-				CurrentFunctionMetaData::funcName + " PROC\n";
+		//code += "; TODO: Hard coded name, bad!\n" +
+		//		CurrentFunctionMetaData::funcName + " PROC\n";
+
+		code += functionName + " PROC\n";
 	}
 	
 	inline static void SetupStackFrame(std::string& code)
@@ -180,14 +274,14 @@ namespace Prologue
 	
 	
 	
-	inline static void GenerateStackAllocation(std::string& code, i32 allocSize)
+	inline static void GenerateStackAllocation(std::string& code, const i32 allocSize)
 	{
 		code += "sub rsp, " + std::to_string(allocSize) + "\n";
 	}
 	
-	inline static void GenerateFunctionPrologue(std::string& code, AST::Node* node, i32 stackAllocSizeForLocals, i32 stackAllocSizeForTemporaries)
+	inline static void GenerateFunctionPrologue(std::string& code, const i32 stackAllocSizeForLocals, const i32 stackAllocSizeForTemporaries, const std::string& functionName)
 	{
-		WriteFunctionNameProc(code);
+		WriteFunctionNameProc(code, functionName);
 	
 		SetupStackFrame(code);
 	
@@ -200,10 +294,11 @@ namespace Prologue
 
 namespace Epilogue
 {
-	inline static void WriteFunctionNameEndp(std::string& code)
+	inline static void WriteFunctionNameEndp(std::string& code, const std::string& functionName)
 	{
-		code += "; TODO: Hard coded name, bad!\n" +
-				CurrentFunctionMetaData::funcName + " ENDP\n";
+		//code += "; TODO: Hard coded name, bad!\n" +
+		//		CurrentFunctionMetaData::funcName + " ENDP\n";
+		code += functionName + " ENDP\n";
 	}
 
 	inline static void RestoreStackFrame(std::string& code)
@@ -217,7 +312,7 @@ namespace Epilogue
 		code += "add rsp, " + std::to_string(allocSize) + "\n";
 	}
 
-	inline static void GenerateFunctionEpilogue(std::string& code, const i32 stackAllocSizeForLocals, const i32 stackAllocSizeForTemporaries)
+	inline static void GenerateFunctionEpilogue(std::string& code, const i32 stackAllocSizeForLocals, const i32 stackAllocSizeForTemporaries, const std::string& functionName)
 	{
 		code += "; Dealloc section for local variables.\n";
 		GenerateStackDeallocation(code, stackAllocSizeForLocals);
@@ -228,7 +323,7 @@ namespace Epilogue
 
 		code += "ret\n";
 
-		WriteFunctionNameEndp(code);
+		WriteFunctionNameEndp(code, functionName);
 	}
 }
 
@@ -574,7 +669,7 @@ namespace Body
 
 				// Generate operation code. Remember that the temporaries stack section needs to be reset!
 				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
-				// TODO: The type supplied here(s_defaultType/i32) will be too small to hold values gathered from ui64s/i64s.
+				// TODO: The type supplied here from outside(s_defaultType/i32) will be too small to hold values gathered from ui64s/i64s.
 				// In the future, fix this by properly implementing functions, so we may stick it's return type here instead.
 				const PrimitiveType retType = TempVar::s_defaultType;
 				GenOpNodeCode(code, asReturnNode->GetRetExpr(), t0, retType);
@@ -585,9 +680,11 @@ namespace Body
 				// Add some padding.
 				code += "\n\n";
 
-				// Since we're returning, time to generate the epilogue.
-				CurrentFunctionMetaData::temporariesStackSectionSize = *largestTempAllocation;
-				Epilogue::GenerateFunctionEpilogue(code, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
+				// TODO: We're no longer generating the epilogue when we return. Instead, if we find a return statement(in an if-statement), stick the result in RAX and GOTO(!)
+				// the epilogue of the function, skipping all the other code in between.
+				// On the other hand, if we find a lone return statement that obscures code after it, we just raise an error.
+				// CurrentFunctionMetaData::temporariesStackSectionSize = *largestTempAllocation;
+				// Epilogue::GenerateFunctionEpilogue(code, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
 
 				break;
 			}
@@ -648,9 +745,12 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 	//NOTE /\ is assignment, not += !!!!!
 
 	// Function body, add loop later for each function node to generate every function.
+	for (AST::Node* childNode : nodeHead->GetChildren())
 	{
-		// Epilogue contained in body.
-		std::string prologue, body;
+		assert(childNode->GetNodeKind() == Node_k::FunctionNode && "Trying to generate function code for a non-function node");
+		AST::FunctionNode* asFunctionNode = (AST::FunctionNode*)childNode;
+
+		std::string prologue, body, epilogue;
 		
 		// Because we use the stack for temporaries, we need to figure out how much stack space to reserve in the body,
 		// and cannot go on amount of declnodes alone in the prologue function.
@@ -658,21 +758,56 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 
 		// Firstly, figure out the amount of stack space required by local variables, and allocate them.
 		// Results for variables is stored in the symbol table.
-		CurrentFunctionMetaData::varsStackSectionSize = AllocLocals(nodeHead);
+		CurrentFunctionMetaData::varsStackSectionSize = AllocLocals(childNode);
+
+		// Special case for the main function, because you can't define the entrypoint to be whatever with the Microsoft linker.
+		std::string mangledFuncName;
+		if (asFunctionNode->GetName() == std::wstring(WideMainFunctionName))
+		{
+			// Stick the main function name (in BCL) in there as a comment.
+			mangledFuncName = "; main (In BCL: " + std::string(NarrowMainFunctionName) + ")\nmain";
+		}
+		else
+		{
+			char* nameCStr = MangleFunctionName(asFunctionNode->GetName().c_str());
+			mangledFuncName = std::string(nameCStr);
+			free(nameCStr);
+		}
+		CurrentFunctionMetaData::funcName = mangledFuncName;
 
 		// We need to get the biggest size the stack will ever grow to so we can enforce our allocation policy.
 		// Without this we'd allocate more and more stack size for each expression evaluation, even though temporaries should start back at 0 when evaluating a new expression.
 		i32 largestTemporariesAlloc = 0;
 
-		body += "\n\n\n; Body\n";
-		Body::GenerateFunctionBody(body, nodeHead, &largestTemporariesAlloc);
+		body = "\n\n\n; Body\n";
+		Body::GenerateFunctionBody(body, childNode, &largestTemporariesAlloc);
 
 		CurrentFunctionMetaData::temporariesStackSectionSize = largestTemporariesAlloc;
 
-		prologue += "\n\n\n; Prologue\n";
-		Prologue::GenerateFunctionPrologue(prologue, nodeHead, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
+		prologue = "\n\n\n; Prologue\n";
+		Prologue::GenerateFunctionPrologue(
+			prologue,
+			CurrentFunctionMetaData::varsStackSectionSize,
+			CurrentFunctionMetaData::temporariesStackSectionSize,
+			CurrentFunctionMetaData::funcName
+		);
+
+		epilogue = "\n\n\n; Epilogue\n";
+		Epilogue::GenerateFunctionEpilogue(
+			epilogue,
+			CurrentFunctionMetaData::varsStackSectionSize,
+			CurrentFunctionMetaData::temporariesStackSectionSize,
+			CurrentFunctionMetaData::funcName
+		);
 	
-		outCode += prologue + body;
+
+		outCode += prologue + body + epilogue;
+
+		ResetFunctionMetaData(
+			&CurrentFunctionMetaData::varsStackSectionSize,
+			&CurrentFunctionMetaData::temporariesStackSectionSize,
+			&CurrentFunctionMetaData::funcName
+		);
 	}
 
 	Boilerplate::GenerateFooter(boilerplateFooter);

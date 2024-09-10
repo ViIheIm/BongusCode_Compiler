@@ -90,3 +90,7 @@ inline const wchar_t* PrimitiveTypeReflectionWide[] = {
 	L"ui64",
 	L"i64"
 };
+
+// The default name of the main function. When generating this function, it must be swapped out for the unmangled "main" for the linker to catch on.
+inline const char* NarrowMainFunctionName = "Viviscere";
+inline const wchar_t* WideMainFunctionName = L"Viviscere";
