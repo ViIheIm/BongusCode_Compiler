@@ -47,7 +47,9 @@ namespace AST
 		virtual std::vector<Node*> GetChildren(void);
 
 		inline const Node_k GetNodeKind(void) const { return kind; }
+		inline const Node* const GetRightSibling(void) const { return rSibling; }
 		inline const bool HasRightSiblings(void) const { return rSibling != nullptr; }
+		inline void UnbindChildren(void) { lmostChild = nullptr; }
 
 		friend Node* MakeNullNode();
 		friend void DoForAllChildren(Node*, void(*)(Node*, void*), void*);
