@@ -105,11 +105,11 @@ AST::Node* AST::MakeDeclNode(std::wstring* s, PrimitiveType type)
     }
     }
 
-    // Default scope depth to 0. This is properly handled later in the harvest pass over the AST, and in the function nonterminal in the parser.
+    // Default scope depth to 0. This is properly handled later in the harvest pass over the AST.
     node->scopeDepth = 0;
 
 
-    // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
+    // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l, and in the function nonterminal in the parser.
     delete s;
 
     return node;
