@@ -113,7 +113,39 @@ functions: functions function		{ $$ = $1->MakeSiblings($2); }
 		 | function
 		 ;
 
-function: functionHead scope		{ $$ = $1; $1->AdoptChildren($2); }
+function: functionHead scope {
+			$$ = $1;
+			$1->AdoptChildren($2);
+
+			// Add children to $2 through $1->GetArgsList()->rSibling ...
+			AST::FunctionNode* asFuncNode = (AST::FunctionNode*)$1;
+			AST::ArgNode* arg = (AST::ArgNode*)asFuncNode->GetArgsList();
+
+			if (arg != nullptr)
+			{
+				std::wstring* str = new std::wstring(arg->GetName());
+				AST::Node* declNode = AST::MakeDeclNode(str, arg->GetType());
+
+				for (const AST::Node* n = arg->GetRightSibling(); n != nullptr; n = n->GetRightSibling())
+				{
+					AST::ArgNode* asArgNode = (AST::ArgNode*)n;
+
+					// More whack string handovers.
+					std::wstring* str = new std::wstring(asArgNode->GetName());
+
+					// Create a new declnode and append it to the list by going through the head declNode.
+					declNode->MakeSiblings(AST::MakeDeclNode(str, asArgNode->GetType()));
+				}
+
+
+				// Now we need to swap the already generated nodes in the body and the newly added declNodes, because otherwise the new declNodes will
+				// end up at the end of the function, and will thusly fall after the return statement on returning functions and raise an unreachable-code error.
+				AST::Node* oldHead = $2->GetChildren()[0];
+				declNode->MakeSiblings(oldHead);
+				$2->UnbindChildren();
+				$2->AdoptChildren(declNode);
+			}
+		}
 		;
 
 functionHead: type ID LPAREN paramList RPAREN		{ $$ = AST::MakeFunctionNode($1, $2, $4); }

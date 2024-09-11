@@ -105,7 +105,7 @@ AST::Node* AST::MakeDeclNode(std::wstring* s, PrimitiveType type)
     }
     }
 
-    // Default scope depth to 0. This is properly handled later in the harvest pass over the AST.
+    // Default scope depth to 0. This is properly handled later in the harvest pass over the AST, and in the function nonterminal in the parser.
     node->scopeDepth = 0;
 
 
