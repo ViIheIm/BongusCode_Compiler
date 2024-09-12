@@ -8,12 +8,6 @@
 #include <cassert>
 
 /*
-	TODO: Integrate function name mangler from sandbox!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-*/
-
-
-/*
 	Name mangling in bonguscode is like how most C-compilers mangle their names.
 	Firstly, we prepend an underscore.
 	Secondly, and this is the more involved operation;
@@ -162,7 +156,7 @@ void ProcessLocalsCallback(AST::Node* n, void* args)
 
 		std::wstring key = g_symTable.ComposeKey(asDeclNode->GetName(), asDeclNode->GetScopeDepth());
 		SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
-		entry->stackLocation = *allocSize;
+		entry->asVar.adress = *allocSize;
 
 		*allocSize += asDeclNode->GetSize();
 	}
@@ -180,6 +174,8 @@ namespace CurrentFunctionMetaData
 	i32 temporariesStackSectionSize = 0;
 
 	static std::string funcName("NO_NAME_ASSIGNED");
+
+	PrimitiveType retType;
 }
 
 // This uses pointers instead of modifying the above namespace's globals directly, so we can easily swap out where the metadata
@@ -204,7 +200,7 @@ ui32 AllocLocals(AST::Node* funcHeadNode)
 struct TempVar
 {
 	std::string name;
-	i32 place;
+	i32 adress;
 
 	static const PrimitiveType s_defaultType = PrimitiveType::i32;
 };
@@ -426,6 +422,8 @@ namespace Body
 		return std::string(wordKind + " " + std::to_string(offset) + "[rsp]");
 	}
 
+	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node, PrimitiveType exprType);
+
 	static void GenOpNodeCode(std::string& code, AST::Node* node, const TempVar& t0, const PrimitiveType exprType)
 	{
 		visitedNodes.push_back(node);
@@ -442,8 +440,7 @@ namespace Body
 	
 
 			GenOpNodeCode(code, asOpNode->GetLHS(), t0, exprType);
-	
-			//auto [t1, t1place] = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+
 			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
 			GenOpNodeCode(code, asOpNode->GetRHS(), t1, exprType);
 	
@@ -452,27 +449,27 @@ namespace Body
 			if (opString == "+")
 			{
 				std::string output = "\n; " + t0.name + " += " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
-									 "\nadd " + RAX + ", " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
+									 "\nadd " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
 			if (opString == "-")
 			{
 				std::string output = "\n; " + t0.name + " -= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
-									 "\nsub " + RAX + ", " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
+									 "\nsub " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
 			else if (opString == "*")
 			{
 				std::string output = "\n; " + t0.name + " *= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
-									 "\nimul " + RAX + ", " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
+									 "\nimul " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
@@ -486,13 +483,13 @@ namespace Body
 				const std::string& RDX = GetReg(RG::RDX, exprType);
 
 				std::string output = "\n; " + t0.name + " /= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
-									 "\nmov " + RBX + ", " + RefTempVar(t1.place, exprType) +		// Store divisor in rbx
+									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
+									 "\nmov " + RBX + ", " + RefTempVar(t1.adress, exprType) +		// Store divisor in rbx
 									 "\nxor " + RDX + ", " + RDX +									// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
 									 "\ndiv " + RBX +												// Perform operation in ebx
 									 "\nmov " + RBX + ", 3405691582 ; 0xCAFEBABE" +					// Store sentinel value CAFEBABE in rbx in case of bugs.
 									 "\nmov " + RDX + ", 4276993775 ; 0xFEEDBEEF" +					// Do the same for rdx with FEEDBEEF since it was also used.
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
@@ -512,8 +509,8 @@ namespace Body
 			const std::string& RAX = GetReg(RG::RAX, exprType);
 
 			std::string output = "\n; " + t0.name + " = " + std::to_string(asIntNode->Get()) +
-								 "\nmov " + RefTempVar(t0.place, exprType) + ", " + std::to_string(asIntNode->Get()) +
-								 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) + "\n"; // Also store result in rax.
+								 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + std::to_string(asIntNode->Get()) +
+								 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) + "\n"; // Also store result in rax.
 			code += output;
 			// std::cerr << output;
 	
@@ -536,11 +533,11 @@ namespace Body
 			// If the local variable we're copying from is larger, truncation will happen here, and a warning will be issued.
 			// If the local variable we're copying from is smaller, we'll include values outside of the variable which happen to be there on the stack, and this will be even worse.
 			// TODO: The types might be the same size though, in which case this isn't a truncation. Split this out into two checks - One for signed-unsigned mismatch, the other for truncation.
-			if (exprType != entry->type)
+			if (exprType != entry->asVar.type)
 			{
 				wprintf(L"WARNING: Truncation or signed-unsigned mismatch when trying to copy %s into temporary.\n"\
 						L"Assignee has type %s, local var has type %s.\n\n",
-						entry->name.c_str(), PrimitiveTypeReflectionWide[(ui16)exprType], PrimitiveTypeReflectionWide[(ui16)entry->type]
+						entry->name.c_str(), PrimitiveTypeReflectionWide[(ui16)exprType], PrimitiveTypeReflectionWide[(ui16)entry->asVar.type]
 				);
 
 				code += "\n; WARNING - Truncation or signed-unsigned mismatch";
@@ -548,7 +545,7 @@ namespace Body
 
 			// We must figure out whichever one is smaller. The temporary will still have exprType as it's type, but when we get the value
 			// into rax we need to use the appropriate size (QWORD PTR/DWORD PTR ... and RAX/EAX/AX ...)
-			PrimitiveType smallestType = exprSize < entry->size ? exprType : entry->type;
+			const PrimitiveType smallestType = exprSize < entry->asVar.size ? exprType : entry->asVar.type;
 
 			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
 
@@ -562,19 +559,110 @@ namespace Body
 			// If this is the case, readReg must also be changed from AX to RAX, so this ugly hackaround does that to.
 			// TODO: Refactor this.
 			std::string movToRaxOp("mov ");
-			if (entry->type == PrimitiveType::ui16 || entry->type == PrimitiveType::i16)
+			if (entry->asVar.type == PrimitiveType::ui16 || entry->asVar.type == PrimitiveType::i16)
 			{
 				movToRaxOp = "movzx ";
 				readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
 			}
 
-			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->stackLocation) + ")\n" +
-								 movToRaxOp + readReg + ", " + RefLocalVar(entry->stackLocation, smallestType) +
-								 "\nmov " + RefTempVar(t0.place, exprType) + ", " + writeReg + "\n";
+			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
+								 movToRaxOp + readReg + ", " + RefLocalVar(entry->asVar.adress, smallestType) +
+								 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + writeReg + "\n";
 
 			code += output;
 			// std::cerr << output;
+
+			break;
 		}
+		case Node_k::FunctionCallNode:
+		{
+			AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
+
+			// We've already made sure in the harvest pass that this is indeed a function, and in the semantics pass that this function can be called.
+			std::string output;
+
+			PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+			PushArgsIntoRegs(output, asFunctionCallNode, funcRetType);
+
+			// Get the mangled function name!
+			std::string mangledFunctionName = std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()));
+
+			// Make sure to also store the result out into _t0.
+			output += "; " + t0.name + " = result of function " + mangledFunctionName + "\n" +
+					  "call " + mangledFunctionName + "\n" +
+					  "mov " + RefTempVar(t0.adress, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
+
+			code += output;
+
+			break;
+		}
+		}
+	}
+
+	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node, PrimitiveType exprType)
+	{
+		static const RG callingConvention[] = {
+			RG::RCX,
+			RG::RDX,
+			RG::R8,
+			RG::R9
+		};
+		// Keeps track of how far we've gotten into the calling-convention registers/stack.
+		relptr_t nextSlot = 0;
+
+		for (AST::Node* arg = node->GetArgs(); arg != nullptr; arg = arg->GetRightSibling())
+		{
+			// We need to generate the code for the values we're pushing before we push them.
+			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+			GenOpNodeCode(code, arg, t0, exprType);
+
+			const std::string& reg = GetReg(callingConvention[nextSlot], exprType);
+			code += "; Push " + t0.name + " into " + reg + "\n"
+					"mov " + reg + ", " + RefTempVar(t0.adress, exprType) + "\n\n";
+
+			nextSlot++;
+
+			// TODO: In the future we might want to support more than 4 arguments.
+			if (!(nextSlot < GetArraySize(callingConvention)))
+			{
+				wprintf(L"WARNING: Ran out of registers while trying to call function %s.\n", node->GetName().c_str());
+				break;
+			}
+		}
+	}
+
+	// Retrieves args(if any) by pushing the registers according to the calling convention out to the arg variables.
+	inline static void RetrieveArgs(std::string& code, AST::FunctionNode* functionNode)
+	{
+		static const RG callingConvention[] = {
+			RG::RCX,
+			RG::RDX,
+			RG::R8,
+			RG::R9
+		};
+
+		relptr_t nextSlot = 0;
+
+		for (AST::Node* node = functionNode->GetArgsList(); node != nullptr; node = node->GetRightSibling())
+		{
+			AST::ArgNode* asArgNode = (AST::ArgNode*)node;
+
+			std::wstring composedKey = g_symTable.ComposeKey(asArgNode->GetName(), 1);
+			SymTabEntry* entry = g_symTable.RetrieveSymbol(composedKey);
+
+			std::string readReg(GetReg(callingConvention[nextSlot], entry->asVar.type));
+			std::string movToRaxOp("mov ");
+
+			code += movToRaxOp + RefLocalVar(entry->asVar.adress, entry->asVar.type) + ", " + readReg + "\n";
+
+			nextSlot++;
+
+			// TODO: In the future we might want to support more than 4 arguments.
+			if (!(nextSlot < GetArraySize(callingConvention)))
+			{
+				wprintf(L"WARNING: Ran out of registers while trying to retrieve args for function %s.\n", functionNode->GetName().c_str());
+				break;
+			}
 		}
 	}
 	
@@ -595,7 +683,7 @@ namespace Body
 			{
 				// This is just a lone op node without assignment, but we'll perform the evaluation.
 				// Because of this, we're supplying the default type.
-				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
+				TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
 				GenOpNodeCode(code, node, t0, TempVar::s_defaultType);
 				
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
@@ -630,12 +718,12 @@ namespace Body
 					}
 
 
-					stackLocation = entry->stackLocation;
-					exprType = entry->type;
+					stackLocation = entry->asVar.adress;
+					exprType = entry->asVar.type;
 				}
 
 				// Generate operation code. Remember that the temporaries stack section needs to be reset!
-				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
+				TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
 				// The type and size all temporaries involved in this expression will inherit depends on the type we're assigning to, effectively
 				// handling truncation immediately.
 				GenOpNodeCode(code, asAssNode->GetExpr(), t0, exprType);
@@ -774,12 +862,14 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 			free(nameCStr);
 		}
 		CurrentFunctionMetaData::funcName = mangledFuncName;
+		CurrentFunctionMetaData::retType = asFunctionNode->GetRetType();
 
 		// We need to get the biggest size the stack will ever grow to so we can enforce our allocation policy.
 		// Without this we'd allocate more and more stack size for each expression evaluation, even though temporaries should start back at 0 when evaluating a new expression.
 		i32 largestTemporariesAlloc = 0;
 
 		body = "\n\n\n; Body\n";
+		Body::RetrieveArgs(body, asFunctionNode);
 		Body::GenerateFunctionBody(body, childNode, &largestTemporariesAlloc);
 
 		CurrentFunctionMetaData::temporariesStackSectionSize = largestTemporariesAlloc;

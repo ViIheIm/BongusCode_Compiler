@@ -100,6 +100,10 @@
 %type<ASTNode> mulExpr
 %type<ASTNode> factor
 
+%type<ASTNode> functionCall
+%type<ASTNode> argsList
+%type<ASTNode> arg
+
 %type<primtype> type
 
 %%
@@ -196,6 +200,7 @@ mulExpr: mulExpr MUL_OP factor		{ $$ = AST::MakeOpNode(L'*', $1, $3); }
 factor: NUM_LIT						{ $$ = AST::MakeIntNode($1); }
 	  | ID							{ $$ = AST::MakeSymNode($1); }
 	  | LPAREN expr RPAREN			{ $$ = $2; }
+	  | functionCall				{ $$ = $1; }
 	  ;
 //!Mathematical expression --------------------------------------------------------------------
 
@@ -228,6 +233,19 @@ varAss: ID EQ_OP expr				{ $$ = AST::MakeAssNode(AST::MakeSymNode($1) /* <--- Hu
 returnOp: KWD_RETURN expr			{ $$ = AST::MakeReturnNode($2); }
 		;
 //!Return operation ---------------------------------------------------------------------------
+
+
+// Function call ------------------------------------------------------------------------------
+functionCall: ID LPAREN argsList RPAREN	{ $$ = AST::MakeFunctionCallNode($1, $3); }
+			;
+
+argsList: argsList COMMA arg			{ $1->MakeSiblings($3); $$ = $1; }
+		 | arg							{ $$ = $1; }
+		 ;
+
+arg: expr								{ $$ = $1; }
+	 ;
+//!Function call ------------------------------------------------------------------------------
 
 %%
 

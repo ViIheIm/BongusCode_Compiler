@@ -18,7 +18,8 @@ enum class Node_k : ui16
 	DeclNode,
 	ReturnNode,
 	FunctionNode,
-	ArgNode
+	ArgNode,
+	FunctionCallNode
 };
 
 namespace AST
@@ -47,7 +48,7 @@ namespace AST
 		virtual std::vector<Node*> GetChildren(void);
 
 		inline const Node_k GetNodeKind(void) const { return kind; }
-		inline const Node* const GetRightSibling(void) const { return rSibling; }
+		inline Node* GetRightSibling(void) const { return rSibling; }
 		inline const bool HasRightSiblings(void) const { return rSibling != nullptr; }
 		inline void UnbindChildren(void) { lmostChild = nullptr; }
 
@@ -246,5 +247,22 @@ namespace AST
 
 		std::wstring c;
 		PrimitiveType type;
+	};
+
+	// Represents the result of calling a function.
+	class FunctionCallNode : public Node
+	{
+	public:
+
+		FunctionCallNode() = default;
+		virtual ~FunctionCallNode() override = default;
+		inline const std::wstring& GetName(void) const { return c; }
+		inline Node* GetArgs(void) const { return args; }
+		friend Node* MakeFunctionCallNode(std::wstring*, Node*);
+
+	private:
+
+		std::wstring c;
+		Node* args;
 	};
 }

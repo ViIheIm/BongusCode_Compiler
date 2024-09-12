@@ -45,6 +45,9 @@ namespace AST
 	// makeNode(Symbol name, Type type) instantiates a node for an argument list.
 	Node* MakeArgNode(PrimitiveType type, std::wstring* s);
 
+	// makeNode(Symbol name) instantiates a function call node.
+	Node* MakeFunctionCallNode(std::wstring* s, Node* args);
+
 	// makeNullNode() instantiates a null node that explicitly represents the
 	// absence of structure.For consistency in processing an AST, it is better to
 	// have a null node than to have gaps in the AST or null pointers.
