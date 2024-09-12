@@ -1,6 +1,7 @@
 #include "AST_Semantics_Pass.h"
 #include "ASTNode.h"
 #include "../Exit.h"
+#include "../symbol_table/symtable.h"
 
 static void ProcessNode(AST::Node* n);
 
@@ -25,6 +26,25 @@ static void ProcessNode(AST::Node* n)
 				wprintf(L"ERROR: Unreachable code.\n");
 				Exit(ErrCodes::unreachable_code);
 			}
+
+			break;
+		}
+
+		// We check to make sure that any attempted function call is done on an actual function
+		case Node_k::FunctionCallNode:
+		{
+			AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)n;
+
+			// We make sure that this entry exists in the harvest pass.
+			SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace));
+
+			if (!entry->isFunction)
+			{
+				wprintf(L"ERROR: You cannot call %s -- it is not a function.\n", asFunctionCallNode->GetName().c_str());
+				Exit(ErrCodes::call_to_void);
+			}
+
+			break;
 		}
 	}
 	for (AST::Node* childNode : n->GetChildren())

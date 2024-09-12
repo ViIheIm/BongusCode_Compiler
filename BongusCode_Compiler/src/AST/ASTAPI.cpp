@@ -155,6 +155,20 @@ AST::Node* AST::MakeArgNode(PrimitiveType type, std::wstring* s)
     return node;
 }
 
+AST::Node* AST::MakeFunctionCallNode(std::wstring* s, Node* args)
+{
+    FunctionCallNode* node = new FunctionCallNode();
+    assert(node && "Failed to allocate function call node");
+    node->c = *s;
+    node->kind = Node_k::FunctionCallNode;
+    node->args = args;
+
+    // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
+    delete s;
+
+    return node;
+}
+
 AST::Node* AST::MakeNullNode()
 {
     Node* node = new Node();

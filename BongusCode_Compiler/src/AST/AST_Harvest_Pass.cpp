@@ -28,7 +28,7 @@ static void ProcessNode(AST::Node* n)
         {
             AST::DeclNode* asDeclNode = (AST::DeclNode*)n;
             asDeclNode->SetScopeDepth(symtab.GetScopeDepth());
-            symtab.EnterSymbol(asDeclNode->GetName(), asDeclNode->GetType(), asDeclNode->GetSize());
+            symtab.EnterSymbol(asDeclNode->GetName(), asDeclNode->GetType(), asDeclNode->GetSize(), false);
 
             break;
         }
@@ -43,6 +43,29 @@ static void ProcessNode(AST::Node* n)
                 wprintf(L"ERROR: Undeclared symbol: %s\n", asSymNode->GetName().c_str());
                 Exit(ErrCodes::undeclared_symbol);
             }
+            break;
+        }
+
+        case Node_k::FunctionNode:
+        {
+            AST::FunctionNode* asFunctionNode = (AST::FunctionNode*)n;
+            symtab.EnterSymbol(asFunctionNode->GetName(), asFunctionNode->GetRetType(), 0, true);
+
+            break;
+        }
+
+        case Node_k::FunctionCallNode:
+        {
+            AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)n;
+                                                                                                // All functions must exist in the global namespace, i.e. depth 0.
+            SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace));
+
+            if (entry == nullptr)
+            {
+                wprintf(L"ERROR: Undeclared symbol: %s\nThere is no function with this name.\n", asFunctionCallNode->GetName().c_str());
+                Exit(ErrCodes::undeclared_symbol);
+            }
+
             break;
         }
     }

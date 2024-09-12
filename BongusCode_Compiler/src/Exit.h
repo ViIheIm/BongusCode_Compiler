@@ -10,6 +10,7 @@ enum class ErrCodes : i32
 	unknown_type,
 	unreachable_code,
 	internal_compiler_error,
+	call_to_void,
 };
 
 inline const wchar_t* ErrorsToString[] = {
@@ -20,6 +21,7 @@ inline const wchar_t* ErrorsToString[] = {
 	L"Unknown type",
 	L"Unreachable code",
 	L"Internal compiler error",
+	L"Call to void",
 };
 
 [[noreturn]] void Exit(ErrCodes errCode);

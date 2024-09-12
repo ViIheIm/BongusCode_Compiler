@@ -329,7 +329,10 @@ namespace yy {
         S_varDecl = 40,                          // varDecl
         S_type = 41,                             // type
         S_varAss = 42,                           // varAss
-        S_returnOp = 43                          // returnOp
+        S_returnOp = 43,                         // returnOp
+        S_functionCall = 44,                     // functionCall
+        S_argsList = 45,                         // argsList
+        S_arg = 46                               // arg
       };
     };
 
@@ -817,8 +820,8 @@ namespace yy {
     /// Constants.
     enum
     {
-      yylast_ = 70,     ///< Last index in yytable_.
-      yynnts_ = 18,  ///< Number of nonterminal symbols.
+      yylast_ = 77,     ///< Last index in yytable_.
+      yynnts_ = 21,  ///< Number of nonterminal symbols.
       yyfinal_ = 13 ///< Termination state number.
     };
 
@@ -830,7 +833,7 @@ namespace yy {
 
 
 } // yy
-#line 834 "parser.hpp"
+#line 837 "parser.hpp"
 
 
 
