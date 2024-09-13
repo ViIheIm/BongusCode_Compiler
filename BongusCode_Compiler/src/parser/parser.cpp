@@ -851,7 +851,7 @@ namespace yy {
 
   case 36: // type: KWD_NIHIL
 #line 221 "parser.y"
-                                                                { wprintf(L"ERROR: A variable may not be of type nihil.\n"); Exit(ErrCodes::unknown_type); }
+                                                                { (yylhs.value.primtype) = PrimitiveType::nihil; }
 #line 856 "parser.cpp"
     break;
 
@@ -885,14 +885,20 @@ namespace yy {
 #line 886 "parser.cpp"
     break;
 
-  case 42: // arg: expr
-#line 246 "parser.y"
-                                                                        { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
+  case 42: // argsList: %empty
+#line 244 "parser.y"
+                                                                        { (yylhs.value.ASTNode) = nullptr; }
 #line 892 "parser.cpp"
     break;
 
+  case 43: // arg: expr
+#line 247 "parser.y"
+                                                                        { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
+#line 898 "parser.cpp"
+    break;
 
-#line 896 "parser.cpp"
+
+#line 902 "parser.cpp"
 
             default:
               break;
@@ -1103,9 +1109,9 @@ namespace yy {
        0,    36,    30,    31,    32,    33,    34,    35,     0,     2,
        4,     0,     0,     1,     3,     0,     5,     0,    26,    25,
        0,     0,     0,     0,    14,    18,    21,    24,    15,     0,
-      16,    17,    28,     0,     0,     0,    26,    38,     0,    11,
+      16,    17,    28,     0,     0,    42,    26,    38,     0,    11,
        0,    13,     0,     0,     0,     0,    29,     9,     0,     8,
-       0,    37,    42,     0,    41,    27,    12,    19,    20,    22,
+       0,    37,    43,     0,    41,    27,    12,    19,    20,    22,
       23,     6,     0,    10,    39,     0,     7,    40
   };
 
@@ -1170,7 +1176,7 @@ namespace yy {
       32,    33,    34,    34,    35,    35,    35,    35,    36,    37,
       37,    37,    38,    38,    38,    39,    39,    39,    39,    40,
       41,    41,    41,    41,    41,    41,    41,    42,    43,    44,
-      45,    45,    46
+      45,    45,    45,    46
   };
 
   const signed char
@@ -1180,7 +1186,7 @@ namespace yy {
        2,     3,     3,     2,     1,     1,     1,     1,     1,     3,
        3,     1,     3,     3,     1,     1,     1,     3,     1,     2,
        1,     1,     1,     1,     1,     1,     1,     3,     2,     4,
-       3,     1,     1
+       3,     1,     0,     1
   };
 
 
@@ -1210,7 +1216,7 @@ namespace yy {
      163,   172,   175,   176,   179,   180,   181,   182,   187,   190,
      191,   192,   195,   196,   197,   200,   201,   202,   203,   209,
      212,   213,   215,   216,   218,   219,   221,   227,   233,   239,
-     242,   243,   246
+     242,   243,   244,   247
   };
 
   void
@@ -1291,9 +1297,9 @@ namespace yy {
   }
 
 } // yy
-#line 1295 "parser.cpp"
+#line 1301 "parser.cpp"
 
-#line 250 "parser.y"
+#line 251 "parser.y"
 
 
 

@@ -218,7 +218,7 @@ type: KWD_UI16						{ $$ = PrimitiveType::ui16; }
 	| KWD_UI64						{ $$ = PrimitiveType::ui64; }
 	| KWD_I64						{ $$ = PrimitiveType::i64;	}
 
-	| KWD_NIHIL						{ wprintf(L"ERROR: A variable may not be of type nihil.\n"); Exit(ErrCodes::unknown_type); }
+	| KWD_NIHIL						{ $$ = PrimitiveType::nihil; }
 	;
 //!Variable declaration -----------------------------------------------------------------------
 
@@ -241,6 +241,7 @@ functionCall: ID LPAREN argsList RPAREN	{ $$ = AST::MakeFunctionCallNode($1, $3)
 
 argsList: argsList COMMA arg			{ $1->MakeSiblings($3); $$ = $1; }
 		 | arg							{ $$ = $1; }
+		 | %empty						{ $$ = nullptr; }
 		 ;
 
 arg: expr								{ $$ = $1; }

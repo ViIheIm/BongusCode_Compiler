@@ -30,6 +30,12 @@ static void ProcessNode(AST::Node* n)
             asDeclNode->SetScopeDepth(symtab.GetScopeDepth());
             symtab.EnterSymbol(asDeclNode->GetName(), asDeclNode->GetType(), asDeclNode->GetSize(), false);
 
+            if (asDeclNode->GetType() == PrimitiveType::nihil)
+            {
+                wprintf(L"ERROR: A variable can not be of type nihil.\n");
+                Exit(ErrCodes::unknown_type);
+            }
+
             break;
         }
 
