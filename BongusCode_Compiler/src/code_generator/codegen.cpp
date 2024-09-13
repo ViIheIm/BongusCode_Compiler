@@ -620,7 +620,6 @@ namespace Body
 			code += "; Push " + t0.name + " into " + reg + "\n"
 					"mov " + reg + ", " + RefTempVar(t0.adress, exprType) + "\n\n";
 
-			nextSlot++;
 
 			// TODO: In the future we might want to support more than 4 arguments.
 			if (!(nextSlot < GetArraySize(callingConvention)))
@@ -628,6 +627,7 @@ namespace Body
 				wprintf(L"WARNING: Ran out of registers while trying to call function %s.\n", node->GetName().c_str());
 				break;
 			}
+			nextSlot++;
 		}
 	}
 
@@ -655,7 +655,6 @@ namespace Body
 
 			code += movToRaxOp + RefLocalVar(entry->asVar.adress, entry->asVar.type) + ", " + readReg + "\n";
 
-			nextSlot++;
 
 			// TODO: In the future we might want to support more than 4 arguments.
 			if (!(nextSlot < GetArraySize(callingConvention)))
@@ -663,6 +662,7 @@ namespace Body
 				wprintf(L"WARNING: Ran out of registers while trying to retrieve args for function %s.\n", functionNode->GetName().c_str());
 				break;
 			}
+			nextSlot++;
 		}
 	}
 	
@@ -775,6 +775,13 @@ namespace Body
 				// Epilogue::GenerateFunctionEpilogue(code, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
 
 				break;
+			}
+			case Node_k::FunctionCallNode:
+			{
+				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
+				PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+				PushArgsIntoRegs(code, asFunctionCallNode, funcRetType);
+				code += "call " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
 			}
 		}
 	
