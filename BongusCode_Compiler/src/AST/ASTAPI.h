@@ -39,7 +39,7 @@ namespace AST
 	// makeNode(OpNode retExpr) instantiates a node for a return operation.
 	Node* MakeReturnNode(Node* retExpr);
 
-	// makeNode(name, ret_t, argsList) instantiates a function head node.
+	// makeNode(ret_t, name, argsList) instantiates a function head node.
 	Node* MakeFunctionNode(PrimitiveType retType, std::wstring* s, Node* argsListNode);
 
 	// makeNode(Symbol name, Type type) instantiates a node for an argument list.
@@ -47,6 +47,9 @@ namespace AST
 
 	// makeNode(Symbol name) instantiates a function call node.
 	Node* MakeFunctionCallNode(std::wstring* s, Node* args);
+
+	// makeFwdDeclNode(ret_t, name, argsList) instantiates a forward decl node in a similar manner as to makeFunctionNode.
+	Node* MakeFwdDeclNode(PrimitiveType retType, std::wstring* s, Node* argsListNode);
 
 	// makeNullNode() instantiates a null node that explicitly represents the
 	// absence of structure.For consistency in processing an AST, it is better to

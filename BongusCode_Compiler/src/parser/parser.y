@@ -79,11 +79,14 @@
 %token SEMI
 %token COMMA
 
+%type<ASTNode> globalEntries
+%type<ASTNode> globalEntry
 %type<ASTNode> functions
 %type<ASTNode> function
 %type<ASTNode> functionHead
 %type<ASTNode> paramList
 %type<ASTNode> param
+%type<ASTNode> fwdDecl
 
 %type<ASTNode> scopes
 %type<ASTNode> scope
@@ -109,13 +112,18 @@
 %%
 // AST construction with semantic actions on page 259.
 
-// Functions ---------------------------------------------------------------------------------
-program: functions					{ g_nodeHead = AST::MakeNullNode(); g_nodeHead->AdoptChildren($1); }
+// Functions & Fwd Decl-----------------------------------------------------------------------
+program: globalEntries				{ g_nodeHead = AST::MakeNullNode(); g_nodeHead->AdoptChildren($1); }
 	   ;
 
-functions: functions function		{ $$ = $1->MakeSiblings($2); }
-		 | function
-		 ;
+globalEntries: globalEntries globalEntry	{ $1->MakeSiblings($2); $$ = $1; }
+			 | globalEntry
+			 ;
+
+
+globalEntry: function
+		   | fwdDecl
+		   ;
 
 function: functionHead scope {
 			$$ = $1;
@@ -162,7 +170,11 @@ paramList: paramList COMMA param	{ $1->MakeSiblings($3); $$ = $1; }
 
 param: type ID						{ $$ = AST::MakeArgNode($1, $2); }
 	 ;
-//!Functions ---------------------------------------------------------------------------------
+
+
+fwdDecl: type ID LPAREN paramList RPAREN SEMI		{ $$ = AST::MakeFwdDeclNode($1, $2, $4); }
+	   ;
+//!Functions & Fwd Decl-----------------------------------------------------------------------
 
 
 scopes: scopes scope				{ $1->MakeSiblings($2); $$ = $1; }

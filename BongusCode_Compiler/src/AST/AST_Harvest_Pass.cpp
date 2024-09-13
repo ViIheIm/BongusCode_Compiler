@@ -52,10 +52,23 @@ static void ProcessNode(AST::Node* n)
             break;
         }
 
+        case Node_k::FwdDeclNode:
+        {
+            AST::FwdDeclNode* asFwdDeclNode = (AST::FwdDeclNode*)n;
+            symtab.EnterSymbol(asFwdDeclNode->GetName(), asFwdDeclNode->GetRetType(), 0, true);
+
+            break;
+        }
+
         case Node_k::FunctionNode:
         {
             AST::FunctionNode* asFunctionNode = (AST::FunctionNode*)n;
-            symtab.EnterSymbol(asFunctionNode->GetName(), asFunctionNode->GetRetType(), 0, true);
+
+            // If the entry already exists within the symbol table, then this function has been forward declared.
+            if (symtab.RetrieveSymbol(symtab.ComposeKey(asFunctionNode->GetName(), SymTable::s_globalNamespace)) == nullptr)
+            {
+                symtab.EnterSymbol(asFunctionNode->GetName(), asFunctionNode->GetRetType(), 0, true);
+            }
 
             break;
         }

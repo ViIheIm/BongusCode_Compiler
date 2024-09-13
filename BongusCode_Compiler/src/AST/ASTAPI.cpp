@@ -169,6 +169,23 @@ AST::Node* AST::MakeFunctionCallNode(std::wstring* s, Node* args)
     return node;
 }
 
+AST::Node* AST::MakeFwdDeclNode(PrimitiveType retType, std::wstring* s, Node* argsListNode)
+{
+    FwdDeclNode* node = new FwdDeclNode();
+    assert(node && "Failed to allocate fwd decl node");
+    node->kind = Node_k::FwdDeclNode;
+    node->name = *s;
+    node->retType = retType;
+
+    // In the case of a Nihil arg (e.g. i32 main(Nihil)), argsListNode will be nullptr, so that is perfectly valid behaviour.
+    node->argsList = argsListNode;
+
+    // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
+    delete s;
+
+    return node;
+}
+
 AST::Node* AST::MakeNullNode()
 {
     Node* node = new Node();

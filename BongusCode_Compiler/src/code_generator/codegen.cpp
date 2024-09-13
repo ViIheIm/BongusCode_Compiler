@@ -841,10 +841,13 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 	outCode = boilerplateHeader;
 	//NOTE /\ is assignment, not += !!!!!
 
-	// Function body, add loop later for each function node to generate every function.
 	for (AST::Node* childNode : nodeHead->GetChildren())
 	{
-		assert(childNode->GetNodeKind() == Node_k::FunctionNode && "Trying to generate function code for a non-function node");
+		if (childNode->GetNodeKind() != Node_k::FunctionNode)
+		{
+			// childNode is a forward declaration node, skip it.
+			continue;
+		}
 		AST::FunctionNode* asFunctionNode = (AST::FunctionNode*)childNode;
 
 		std::string prologue, body, epilogue;
