@@ -202,7 +202,7 @@ struct TempVar
 	std::string name;
 	i32 adress;
 
-	static const PrimitiveType s_defaultType = PrimitiveType::i32;
+	static const PrimitiveType s_tempVarDefaultType = AST::IntNode::s_defaultIntLiteralType;
 };
 
 // Allocation is done in two steps. First we get the allocated space with AllocStackSpace(), then we call CommitLastStackAlloc().
@@ -422,7 +422,7 @@ namespace Body
 		return std::string(wordKind + " " + std::to_string(offset) + "[rsp]");
 	}
 
-	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node, PrimitiveType exprType);
+	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node);
 
 	static void GenOpNodeCode(std::string& code, AST::Node* node, const TempVar& t0, const PrimitiveType exprType)
 	{
@@ -584,7 +584,7 @@ namespace Body
 			std::string output;
 
 			PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
-			PushArgsIntoRegs(output, asFunctionCallNode, funcRetType);
+			PushArgsIntoRegs(output, asFunctionCallNode);
 
 			// Get the mangled function name!
 			std::string mangledFunctionName = std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()));
@@ -601,8 +601,41 @@ namespace Body
 		}
 	}
 
-	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node, PrimitiveType exprType)
+	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node)
 	{
+		// Returns the default int type for int literal nodes, the var type of symnodes' symtable entries and
+		// function return type of function call nodes. That should be it for stuff that can appear in expressions.
+		const auto GetTypeFromNode = [](AST::Node* n) -> const PrimitiveType {
+			switch (n->GetNodeKind())
+			{
+			case Node_k::IntNode:
+			{
+				return AST::IntNode::s_defaultIntLiteralType;
+				break;
+			}
+			case Node_k::SymNode:
+			{
+				AST::SymNode* asSymNode = (AST::SymNode*)n;
+				SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asSymNode->GetName(), 1));
+				return entry->asVar.type;
+				break;
+			}
+			case Node_k::FunctionCallNode:
+			{
+				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)n;
+				SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), 1));
+				return entry->asFunction.retType;
+				break;
+			}
+			default:
+			{
+				wprintf(L"ERROR: No type deducible from node n in " __FUNCSIG__ "\n");
+				Exit(ErrCodes::unknown_type);
+				break;
+			}
+			}
+		};
+
 		static const RG callingConvention[] = {
 			RG::RCX,
 			RG::RDX,
@@ -614,6 +647,8 @@ namespace Body
 
 		for (AST::Node* arg = node->GetArgs(); arg != nullptr; arg = arg->GetRightSibling())
 		{
+			const PrimitiveType exprType = GetTypeFromNode(arg);
+
 			// We need to generate the code for the values we're pushing before we push them.
 			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
 			GenOpNodeCode(code, arg, t0, exprType);
@@ -686,7 +721,7 @@ namespace Body
 				// This is just a lone op node without assignment, but we'll perform the evaluation.
 				// Because of this, we're supplying the default type.
 				TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
-				GenOpNodeCode(code, node, t0, TempVar::s_defaultType);
+				GenOpNodeCode(code, node, t0, TempVar::s_tempVarDefaultType);
 				
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
 				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
@@ -782,12 +817,7 @@ namespace Body
 			{
 				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
 				PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
-				// Special case for functions returning void. TODO: You need to restructure the whole type system so that args are pushed with their own types.
-				if (funcRetType == PrimitiveType::nihil)
-				{
-					funcRetType = PrimitiveType::i32;
-				}
-				PushArgsIntoRegs(code, asFunctionCallNode, funcRetType);
+				PushArgsIntoRegs(code, asFunctionCallNode);
 				code += "call " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
 			}
 		}
