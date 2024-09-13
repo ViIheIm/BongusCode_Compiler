@@ -39,6 +39,7 @@ enum Tok : i32
 	GreaterThanOrEqualToOperator
 };
 
+/*
 enum class PrimitiveType : ui16
 {
 	invalid,
@@ -58,7 +59,6 @@ enum class PrimitiveType : ui16
 	i64
 };
 
-// Maintain parity! TODO: Maybe stick all three in an x-macro
 inline const char* PrimitiveTypeReflectionNarrow[] = {
 	"invalid",
 
@@ -94,6 +94,34 @@ inline const wchar_t* PrimitiveTypeReflectionWide[] = {
 	L"ui64",
 	L"i64"
 };
+*/
+
+
+#pragma region PrimitiveTypesList
+#define LIST(X) X(invalid) X(nihil) X(ui8) X(i8) X(ui16) X(i16) X(ui32) X(i32) X(ui64) X(i64)
+#pragma endregion
+
+#define X(val) val,
+	
+enum class PrimitiveType : ui16
+{
+	LIST(X)
+};
+
+#undef X
+#define X(val) #val,
+
+inline const char* PrimitiveTypeReflectionNarrow[] = {
+	LIST(X)
+};
+
+#undef X
+#define X(val) L#val,
+
+inline const wchar_t* PrimitiveTypeReflectionWide[] = {
+	LIST(X)
+};
+
 
 // The default name of the main function. When generating this function, it must be swapped out for the unmangled "main" for the linker to catch on.
 inline const char* NarrowMainFunctionName = "Viviscere";
