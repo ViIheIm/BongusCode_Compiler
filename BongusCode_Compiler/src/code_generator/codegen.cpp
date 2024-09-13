@@ -578,6 +578,8 @@ namespace Body
 		{
 			AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
 
+			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
+
 			// We've already made sure in the harvest pass that this is indeed a function, and in the semantics pass that this function can be called.
 			std::string output;
 
@@ -753,13 +755,13 @@ namespace Body
 				// The result of the expression we're about to evaluate is stored in rax by default,
 				// so we don't need to do anything more than ensure that the expression's code is generated.
 
-				code += "\n; Return expression(Return i32!):";
+				const PrimitiveType retType = CurrentFunctionMetaData::retType;
+				code += "\n; Return expression(ret_t: " + std::string(PrimitiveTypeReflectionNarrow[(ui16)retType]) + "):\n";
 
 				// Generate operation code. Remember that the temporaries stack section needs to be reset!
 				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
 				// TODO: The type supplied here from outside(s_defaultType/i32) will be too small to hold values gathered from ui64s/i64s.
 				// In the future, fix this by properly implementing functions, so we may stick it's return type here instead.
-				const PrimitiveType retType = TempVar::s_defaultType;
 				GenOpNodeCode(code, asReturnNode->GetRetExpr(), t0, retType);
 
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.

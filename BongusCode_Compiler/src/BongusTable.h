@@ -62,6 +62,8 @@ enum class PrimitiveType : ui16
 inline const char* PrimitiveTypeReflectionNarrow[] = {
 	"invalid",
 
+	"nihil",
+
 	"ui8",
 	"i8",
 
@@ -78,6 +80,8 @@ inline const char* PrimitiveTypeReflectionNarrow[] = {
 inline const wchar_t* PrimitiveTypeReflectionWide[] = {
 	L"invalid",
 	
+	L"nihil",
+
 	L"ui8",
 	L"i8",
 	
