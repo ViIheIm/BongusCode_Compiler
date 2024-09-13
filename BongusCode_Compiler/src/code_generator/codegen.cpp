@@ -782,6 +782,11 @@ namespace Body
 			{
 				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
 				PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+				// Special case for functions returning void. TODO: You need to restructure the whole type system so that args are pushed with their own types.
+				if (funcRetType == PrimitiveType::nihil)
+				{
+					funcRetType = PrimitiveType::i32;
+				}
 				PushArgsIntoRegs(code, asFunctionCallNode, funcRetType);
 				code += "call " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
 			}
