@@ -41,7 +41,7 @@ static void ProcessNode(AST::Node* n)
 			if (!entry->isFunction)
 			{
 				wprintf(L"ERROR: You cannot call %s -- it is not a function.\n", asFunctionCallNode->GetName().c_str());
-				Exit(ErrCodes::call_to_void);
+				Exit(ErrCodes::attempted_to_call_a_non_function);
 			}
 
 			break;
