@@ -314,25 +314,27 @@ namespace yy {
         S_COMMA = 25,                            // COMMA
         S_YYACCEPT = 26,                         // $accept
         S_program = 27,                          // program
-        S_functions = 28,                        // functions
-        S_function = 29,                         // function
-        S_functionHead = 30,                     // functionHead
-        S_paramList = 31,                        // paramList
-        S_param = 32,                            // param
-        S_scope = 33,                            // scope
-        S_stmts = 34,                            // stmts
-        S_stmt = 35,                             // stmt
-        S_expr = 36,                             // expr
-        S_addExpr = 37,                          // addExpr
-        S_mulExpr = 38,                          // mulExpr
-        S_factor = 39,                           // factor
-        S_varDecl = 40,                          // varDecl
-        S_type = 41,                             // type
-        S_varAss = 42,                           // varAss
-        S_returnOp = 43,                         // returnOp
-        S_functionCall = 44,                     // functionCall
-        S_argsList = 45,                         // argsList
-        S_arg = 46                               // arg
+        S_globalEntries = 28,                    // globalEntries
+        S_globalEntry = 29,                      // globalEntry
+        S_function = 30,                         // function
+        S_functionHead = 31,                     // functionHead
+        S_paramList = 32,                        // paramList
+        S_param = 33,                            // param
+        S_fwdDecl = 34,                          // fwdDecl
+        S_scope = 35,                            // scope
+        S_stmts = 36,                            // stmts
+        S_stmt = 37,                             // stmt
+        S_expr = 38,                             // expr
+        S_addExpr = 39,                          // addExpr
+        S_mulExpr = 40,                          // mulExpr
+        S_factor = 41,                           // factor
+        S_varDecl = 42,                          // varDecl
+        S_type = 43,                             // type
+        S_varAss = 44,                           // varAss
+        S_returnOp = 45,                         // returnOp
+        S_functionCall = 46,                     // functionCall
+        S_argsList = 47,                         // argsList
+        S_arg = 48                               // arg
       };
     };
 
@@ -593,7 +595,7 @@ namespace yy {
 
 #if YYDEBUG
     // YYRLINE[YYN] -- Source line where rule number YYN was defined.
-    static const unsigned char yyrline_[];
+    static const short yyrline_[];
     /// Report on the debug stream that the rule \a r is going to be reduced.
     virtual void yy_reduce_print_ (int r) const;
     /// Print the state stack on the debug stream.
@@ -820,9 +822,9 @@ namespace yy {
     /// Constants.
     enum
     {
-      yylast_ = 77,     ///< Last index in yytable_.
-      yynnts_ = 21,  ///< Number of nonterminal symbols.
-      yyfinal_ = 13 ///< Termination state number.
+      yylast_ = 80,     ///< Last index in yytable_.
+      yynnts_ = 23,  ///< Number of nonterminal symbols.
+      yyfinal_ = 15 ///< Termination state number.
     };
 
 
@@ -833,7 +835,7 @@ namespace yy {
 
 
 } // yy
-#line 837 "parser.hpp"
+#line 839 "parser.hpp"
 
 
 

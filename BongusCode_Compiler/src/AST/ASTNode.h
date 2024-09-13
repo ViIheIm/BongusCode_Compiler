@@ -19,7 +19,8 @@ enum class Node_k : ui16
 	ReturnNode,
 	FunctionNode,
 	ArgNode,
-	FunctionCallNode
+	FunctionCallNode,
+	FwdDeclNode
 };
 
 namespace AST
@@ -264,5 +265,23 @@ namespace AST
 
 		std::wstring c;
 		Node* args;
+	};
+
+	class FwdDeclNode : public Node
+	{
+	public:
+		FwdDeclNode() = default;
+		virtual ~FwdDeclNode() override = default;
+
+		inline const std::wstring& GetName(void) const { return name; }
+		inline const PrimitiveType GetRetType(void) const { return retType; }
+		inline Node* GetArgsList(void) const { return argsList; }
+		friend Node* MakeFwdDeclNode(PrimitiveType, std::wstring*, Node*);
+
+	private:
+
+		std::wstring name;
+		PrimitiveType retType;
+		Node* argsList;
 	};
 }
