@@ -52,6 +52,7 @@
 %token <str> ID
 %token <num> NUM_LIT
 
+%token KWD_NIHIL
 %token KWD_UI8
 %token KWD_I8
 %token KWD_UI16
@@ -75,8 +76,17 @@
 %token LCURLY
 %token RCURLY
 
-
 %token SEMI
+%token COMMA
+
+%type<ASTNode> globalEntries
+%type<ASTNode> globalEntry
+%type<ASTNode> functions
+%type<ASTNode> function
+%type<ASTNode> functionHead
+%type<ASTNode> paramList
+%type<ASTNode> param
+%type<ASTNode> fwdDecl
 
 %type<ASTNode> scopes
 %type<ASTNode> scope
@@ -93,15 +103,81 @@
 %type<ASTNode> mulExpr
 %type<ASTNode> factor
 
+%type<ASTNode> functionCall
+%type<ASTNode> argsList
+%type<ASTNode> arg
+
 %type<primtype> type
 
 %%
 // AST construction with semantic actions on page 259.
 
-program: scopes						{ g_nodeHead = AST::MakeNullNode(); g_nodeHead->AdoptChildren($1); }
+// Functions & Fwd Decl-----------------------------------------------------------------------
+program: globalEntries				{ g_nodeHead = AST::MakeNullNode(); g_nodeHead->AdoptChildren($1); }
 	   ;
 
-scopes: scopes scope				{ $$ = $1->MakeSiblings($2); }
+globalEntries: globalEntries globalEntry	{ $1->MakeSiblings($2); $$ = $1; }
+			 | globalEntry
+			 ;
+
+
+globalEntry: function
+		   | fwdDecl
+		   ;
+
+function: functionHead scope {
+			$$ = $1;
+			$1->AdoptChildren($2);
+
+			// Add children to $2 through $1->GetArgsList()->rSibling ...
+			AST::FunctionNode* asFuncNode = (AST::FunctionNode*)$1;
+			AST::ArgNode* arg = (AST::ArgNode*)asFuncNode->GetArgsList();
+
+			if (arg != nullptr)
+			{
+				std::wstring* str = new std::wstring(arg->GetName());
+				AST::Node* declNode = AST::MakeDeclNode(str, arg->GetType());
+
+				for (const AST::Node* n = arg->GetRightSibling(); n != nullptr; n = n->GetRightSibling())
+				{
+					AST::ArgNode* asArgNode = (AST::ArgNode*)n;
+
+					// More whack string handovers.
+					std::wstring* str = new std::wstring(asArgNode->GetName());
+
+					// Create a new declnode and append it to the list by going through the head declNode.
+					declNode->MakeSiblings(AST::MakeDeclNode(str, asArgNode->GetType()));
+				}
+
+
+				// Now we need to swap the already generated nodes in the body and the newly added declNodes, because otherwise the new declNodes will
+				// end up at the end of the function, and will thusly fall after the return statement on returning functions and raise an unreachable-code error.
+				AST::Node* oldHead = $2->GetChildren()[0];
+				declNode->MakeSiblings(oldHead);
+				$2->UnbindChildren();
+				$2->AdoptChildren(declNode);
+			}
+		}
+		;
+
+functionHead: type ID LPAREN paramList RPAREN		{ $$ = AST::MakeFunctionNode($1, $2, $4); }
+			;
+
+paramList: paramList COMMA param	{ $1->MakeSiblings($3); $$ = $1; }
+		 | param
+		 | KWD_NIHIL				{ $$ = nullptr; }
+		 ;
+
+param: type ID						{ $$ = AST::MakeArgNode($1, $2); }
+	 ;
+
+
+fwdDecl: type ID LPAREN paramList RPAREN SEMI		{ $$ = AST::MakeFwdDeclNode($1, $2, $4); }
+	   ;
+//!Functions & Fwd Decl-----------------------------------------------------------------------
+
+
+scopes: scopes scope				{ $1->MakeSiblings($2); $$ = $1; }
 	  | scope
 	  ;
 
@@ -136,6 +212,7 @@ mulExpr: mulExpr MUL_OP factor		{ $$ = AST::MakeOpNode(L'*', $1, $3); }
 factor: NUM_LIT						{ $$ = AST::MakeIntNode($1); }
 	  | ID							{ $$ = AST::MakeSymNode($1); }
 	  | LPAREN expr RPAREN			{ $$ = $2; }
+	  | functionCall				{ $$ = $1; }
 	  ;
 //!Mathematical expression --------------------------------------------------------------------
 
@@ -152,6 +229,8 @@ type: KWD_UI16						{ $$ = PrimitiveType::ui16; }
 
 	| KWD_UI64						{ $$ = PrimitiveType::ui64; }
 	| KWD_I64						{ $$ = PrimitiveType::i64;	}
+
+	| KWD_NIHIL						{ $$ = PrimitiveType::nihil; }
 	;
 //!Variable declaration -----------------------------------------------------------------------
 
@@ -166,6 +245,20 @@ varAss: ID EQ_OP expr				{ $$ = AST::MakeAssNode(AST::MakeSymNode($1) /* <--- Hu
 returnOp: KWD_RETURN expr			{ $$ = AST::MakeReturnNode($2); }
 		;
 //!Return operation ---------------------------------------------------------------------------
+
+
+// Function call ------------------------------------------------------------------------------
+functionCall: ID LPAREN argsList RPAREN	{ $$ = AST::MakeFunctionCallNode($1, $3); }
+			;
+
+argsList: argsList COMMA arg			{ $1->MakeSiblings($3); $$ = $1; }
+		 | arg							{ $$ = $1; }
+		 | %empty						{ $$ = nullptr; }
+		 ;
+
+arg: expr								{ $$ = $1; }
+	 ;
+//!Function call ------------------------------------------------------------------------------
 
 %%
 

@@ -109,7 +109,7 @@ AST::Node* AST::MakeDeclNode(std::wstring* s, PrimitiveType type)
     node->scopeDepth = 0;
 
 
-    // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
+    // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l, and in the function nonterminal in the parser.
     delete s;
 
     return node;
@@ -121,6 +121,68 @@ AST::Node* AST::MakeReturnNode(Node* retExpr)
     assert(node && "Failed to allocate return node");
     node->retExpr = retExpr;
     node->kind = Node_k::ReturnNode;
+    return node;
+}
+
+AST::Node* AST::MakeFunctionNode(PrimitiveType retType, std::wstring* s, Node* argsListNode)
+{
+    FunctionNode* node = new FunctionNode();
+    assert(node && "Failed to allocate function node");
+    node->kind = Node_k::FunctionNode;
+    node->name = *s;
+    node->retType = retType;
+
+    // In the case of a Nihil arg (e.g. i32 main(Nihil)), argsListNode will be nullptr, so that is perfectly valid behaviour.
+    node->argsList = argsListNode;
+
+    // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
+    delete s;
+
+    return node;
+}
+
+AST::Node* AST::MakeArgNode(PrimitiveType type, std::wstring* s)
+{
+    ArgNode* node = new ArgNode();
+    assert(node && "Failed to allocate arg node");
+    node->c = *s;
+    node->kind = Node_k::ArgNode;
+    node->type = type;
+
+    // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
+    delete s;
+
+    return node;
+}
+
+AST::Node* AST::MakeFunctionCallNode(std::wstring* s, Node* args)
+{
+    FunctionCallNode* node = new FunctionCallNode();
+    assert(node && "Failed to allocate function call node");
+    node->c = *s;
+    node->kind = Node_k::FunctionCallNode;
+    node->args = args;
+
+    // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
+    delete s;
+
+    return node;
+}
+
+AST::Node* AST::MakeFwdDeclNode(PrimitiveType retType, std::wstring* s, Node* argsListNode)
+{
+    FwdDeclNode* node = new FwdDeclNode();
+    assert(node && "Failed to allocate fwd decl node");
+    node->kind = Node_k::FwdDeclNode;
+    node->name = *s;
+    node->retType = retType;
+
+    // In the case of a Nihil arg (e.g. i32 main(Nihil)), argsListNode will be nullptr, so that is perfectly valid behaviour.
+    node->argsList = argsListNode;
+
+    // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
+    delete s;
+
     return node;
 }
 

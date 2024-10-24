@@ -1,1 +1,1 @@
-BongusCode is a C-like compiled programming language.
+BongusCode, or BC:PL(not to be confused with BCPL) is a C-like compiled programming language.

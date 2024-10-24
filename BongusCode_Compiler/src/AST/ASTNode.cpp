@@ -155,3 +155,16 @@ std::vector<AST::Node*> AST::ReturnNode::GetChildren(void)
 
     return res;
 }
+
+std::vector<AST::Node*> AST::FunctionNode::GetChildren(void)
+{
+    // Run base implementation first.
+    std::vector<Node*> res = Node::GetChildren();
+
+    if (argsList != nullptr)
+    {
+        res.push_back(argsList);
+    }
+
+    return res;
+}

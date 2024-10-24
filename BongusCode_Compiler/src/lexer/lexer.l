@@ -23,6 +23,7 @@ using BTok = yy::parser::token::token_kind_type;
 COMMENT			"||"[^\n]*
 WHITESPACE		[[:space:]]+
 
+KWD_NIHIL		"nihil"
 KWD_UI8			"ui8"
 KWD_I8			"i8"
 KWD_UI16		"ui16"
@@ -50,11 +51,16 @@ LCURLY			\{
 RCURLY			\}
 
 SEMI			\.
+COMMA			\,
 
 %%
 
 {COMMENT}
 {WHITESPACE}
+
+{KWD_NIHIL}
+	LEXLOG(L"Found KWD_NIHIL: %s\n", wstr().c_str());
+	return BTok::KWD_NIHIL;
 
 {KWD_UI8}
 	LEXLOG(L"Found KWD_UI8: %s\n", wstr().c_str());
@@ -149,5 +155,9 @@ SEMI			\.
 {SEMI}
 	LEXLOG(L"Found SEMI: %s\n", wstr().c_str());
 	return BTok::SEMI;
+
+{COMMA}
+	LEXLOG(L"Found COMMA: %s\n", wstr().c_str());
+	return BTok::COMMA;
 
 %%
