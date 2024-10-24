@@ -3,10 +3,88 @@
 #include "../AST/ASTAPI.h"
 #include "../symbol_table/symtable.h"
 #include "../Exit.h"
+#include "../CStrLib.h"
+#include "../Utils.h"
+#include <cassert>
 
 /*
-	TODO: Integrate function name mangler from sandbox!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	Name mangling in bonguscode is like how most C-compilers mangle their names.
+	Firstly, we prepend an underscore.
+	Secondly, and this is the more involved operation;
+	In the case of unicode characters, we expand out the unicode character
+	into a string of it's hex value.
 */
+constexpr ui16 hexExpansionAmount = 4;
+
+inline static void Mangle(wchar_t* outStr, const ui16 newStrLen)
+{
+	const ui16 newStrByteLen = sizeof(wchar_t) * newStrLen;
+
+	wchar_t* tempMem = (wchar_t*)malloc(newStrByteLen);
+	ZeroMem(tempMem, newStrByteLen);
+
+	// Start by prepending an underscore.
+	wcscpy(tempMem, outStr);
+	*outStr = L'_';
+
+	// Copy everything back.
+	wcscpy(outStr + 1, tempMem);
+
+	// Clear tempMem.
+	ZeroMem(tempMem, newStrByteLen);
+
+
+	for (wchar_t* c = outStr; *c != 0; c++)
+	{
+		// Only mangle unicode characters.
+		if (IsUnicode(*c))
+		{
+			// Copy over everything after c to tempMem.
+			wcscpy(tempMem, c + 1);
+
+			swprintf(c, L"%.*X", hexExpansionAmount, *c);
+
+			// Copy everything after c back.
+			wcscpy(c + hexExpansionAmount, tempMem);
+
+			// Clear tempMem.
+			ZeroMem(tempMem, newStrByteLen);
+
+			// We're not iterating c here because if it's at the end of the string, and there's a unicode character there, it will skip past said character.
+			// Besides, no character we just wrote will be a unicode character, so it's safe to reread characters we just wrote.
+		}
+	}
+}
+
+inline static char* MangleFunctionName(const wchar_t* wstr)
+{
+	// Figure out new size, taking unicode character expansion into account.
+	// It's defaulted to 1 to take leading underscore into account.
+	ui16 newStrLen = 1;
+	for (const wchar_t* c = wstr; *c != 0; c++)
+	{
+		if (IsUnicode(*c))
+		{
+			newStrLen += hexExpansionAmount;
+		}
+		else
+		{
+			newStrLen += 1;
+		}
+	}
+	// Add size for null terminator.
+	newStrLen += 1;
+
+	wchar_t* expandedWideStr = (wchar_t*)malloc(sizeof(wchar_t) * newStrLen);
+	ZeroMem(expandedWideStr, sizeof(wchar_t) * newStrLen);
+	wcscpy(expandedWideStr, wstr);
+	Mangle(expandedWideStr, newStrLen);
+	char* narrowedStr = (char*)malloc(sizeof(char) * newStrLen);
+	NarrowWideString(expandedWideStr, newStrLen, narrowedStr);
+	free(expandedWideStr);
+
+	return narrowedStr;
+}
 
 namespace Registers
 {
@@ -78,7 +156,7 @@ void ProcessLocalsCallback(AST::Node* n, void* args)
 
 		std::wstring key = g_symTable.ComposeKey(asDeclNode->GetName(), asDeclNode->GetScopeDepth());
 		SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
-		entry->stackLocation = *allocSize;
+		entry->asVar.adress = *allocSize;
 
 		*allocSize += asDeclNode->GetSize();
 	}
@@ -95,8 +173,18 @@ namespace CurrentFunctionMetaData
 	// varsStackSectionSize + temporariesStackSectionSize = total stack size
 	i32 temporariesStackSectionSize = 0;
 
-	// TODO: Get this name from a function head node when you finally integrate functions.
-	static std::string funcName("main");
+	static std::string funcName("NO_NAME_ASSIGNED");
+
+	PrimitiveType retType;
+}
+
+// This uses pointers instead of modifying the above namespace's globals directly, so we can easily swap out where the metadata
+// will be stored in the future.
+inline static void ResetFunctionMetaData(i32* varsStackSectionSize, i32* temporariesStackSectionSize, std::string* funcName)
+{
+	*varsStackSectionSize = 0;
+	*temporariesStackSectionSize = 0;
+	*funcName = std::string("NO_NAME_ASSIGNED");
 }
 
 ui32 AllocLocals(AST::Node* funcHeadNode)
@@ -112,9 +200,9 @@ ui32 AllocLocals(AST::Node* funcHeadNode)
 struct TempVar
 {
 	std::string name;
-	i32 place;
+	i32 adress;
 
-	static const PrimitiveType s_defaultType = PrimitiveType::i32;
+	static const PrimitiveType s_tempVarDefaultType = AST::IntNode::s_defaultIntLiteralType;
 };
 
 // Allocation is done in two steps. First we get the allocated space with AllocStackSpace(), then we call CommitLastStackAlloc().
@@ -166,10 +254,12 @@ inline static const ui16 GetSizeFromType(const PrimitiveType type)
 
 namespace Prologue
 {
-	inline static void WriteFunctionNameProc(std::string& code)
+	inline static void WriteFunctionNameProc(std::string& code, const std::string& functionName)
 	{
-		code += "; TODO: Hard coded name, bad!\n" +
-				CurrentFunctionMetaData::funcName + " PROC\n";
+		//code += "; TODO: Hard coded name, bad!\n" +
+		//		CurrentFunctionMetaData::funcName + " PROC\n";
+
+		code += functionName + " PROC\n";
 	}
 	
 	inline static void SetupStackFrame(std::string& code)
@@ -180,14 +270,14 @@ namespace Prologue
 	
 	
 	
-	inline static void GenerateStackAllocation(std::string& code, i32 allocSize)
+	inline static void GenerateStackAllocation(std::string& code, const i32 allocSize)
 	{
 		code += "sub rsp, " + std::to_string(allocSize) + "\n";
 	}
 	
-	inline static void GenerateFunctionPrologue(std::string& code, AST::Node* node, i32 stackAllocSizeForLocals, i32 stackAllocSizeForTemporaries)
+	inline static void GenerateFunctionPrologue(std::string& code, const i32 stackAllocSizeForLocals, const i32 stackAllocSizeForTemporaries, const std::string& functionName)
 	{
-		WriteFunctionNameProc(code);
+		WriteFunctionNameProc(code, functionName);
 	
 		SetupStackFrame(code);
 	
@@ -200,10 +290,11 @@ namespace Prologue
 
 namespace Epilogue
 {
-	inline static void WriteFunctionNameEndp(std::string& code)
+	inline static void WriteFunctionNameEndp(std::string& code, const std::string& functionName)
 	{
-		code += "; TODO: Hard coded name, bad!\n" +
-				CurrentFunctionMetaData::funcName + " ENDP\n";
+		//code += "; TODO: Hard coded name, bad!\n" +
+		//		CurrentFunctionMetaData::funcName + " ENDP\n";
+		code += functionName + " ENDP\n";
 	}
 
 	inline static void RestoreStackFrame(std::string& code)
@@ -217,7 +308,7 @@ namespace Epilogue
 		code += "add rsp, " + std::to_string(allocSize) + "\n";
 	}
 
-	inline static void GenerateFunctionEpilogue(std::string& code, const i32 stackAllocSizeForLocals, const i32 stackAllocSizeForTemporaries)
+	inline static void GenerateFunctionEpilogue(std::string& code, const i32 stackAllocSizeForLocals, const i32 stackAllocSizeForTemporaries, const std::string& functionName)
 	{
 		code += "; Dealloc section for local variables.\n";
 		GenerateStackDeallocation(code, stackAllocSizeForLocals);
@@ -228,7 +319,7 @@ namespace Epilogue
 
 		code += "ret\n";
 
-		WriteFunctionNameEndp(code);
+		WriteFunctionNameEndp(code, functionName);
 	}
 }
 
@@ -331,6 +422,8 @@ namespace Body
 		return std::string(wordKind + " " + std::to_string(offset) + "[rsp]");
 	}
 
+	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node);
+
 	static void GenOpNodeCode(std::string& code, AST::Node* node, const TempVar& t0, const PrimitiveType exprType)
 	{
 		visitedNodes.push_back(node);
@@ -347,8 +440,7 @@ namespace Body
 	
 
 			GenOpNodeCode(code, asOpNode->GetLHS(), t0, exprType);
-	
-			//auto [t1, t1place] = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+
 			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
 			GenOpNodeCode(code, asOpNode->GetRHS(), t1, exprType);
 	
@@ -357,27 +449,27 @@ namespace Body
 			if (opString == "+")
 			{
 				std::string output = "\n; " + t0.name + " += " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
-									 "\nadd " + RAX + ", " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
+									 "\nadd " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
 			if (opString == "-")
 			{
 				std::string output = "\n; " + t0.name + " -= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
-									 "\nsub " + RAX + ", " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
+									 "\nsub " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
 			else if (opString == "*")
 			{
 				std::string output = "\n; " + t0.name + " *= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
-									 "\nimul " + RAX + ", " + RefTempVar(t1.place, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
+									 "\nimul " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
+									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
@@ -391,13 +483,13 @@ namespace Body
 				const std::string& RDX = GetReg(RG::RDX, exprType);
 
 				std::string output = "\n; " + t0.name + " /= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) +		// Store _tfirst in eax
-									 "\nmov " + RBX + ", " + RefTempVar(t1.place, exprType) +		// Store divisor in rbx
+									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
+									 "\nmov " + RBX + ", " + RefTempVar(t1.adress, exprType) +		// Store divisor in rbx
 									 "\nxor " + RDX + ", " + RDX +									// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
 									 "\ndiv " + RBX +												// Perform operation in ebx
 									 "\nmov " + RBX + ", 3405691582 ; 0xCAFEBABE" +					// Store sentinel value CAFEBABE in rbx in case of bugs.
 									 "\nmov " + RDX + ", 4276993775 ; 0xFEEDBEEF" +					// Do the same for rdx with FEEDBEEF since it was also used.
-									 "\nmov " + RefTempVar(t0.place, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
 				// std::cerr << output;
 			}
@@ -417,8 +509,8 @@ namespace Body
 			const std::string& RAX = GetReg(RG::RAX, exprType);
 
 			std::string output = "\n; " + t0.name + " = " + std::to_string(asIntNode->Get()) +
-								 "\nmov " + RefTempVar(t0.place, exprType) + ", " + std::to_string(asIntNode->Get()) +
-								 "\nmov " + RAX + ", " + RefTempVar(t0.place, exprType) + "\n"; // Also store result in rax.
+								 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + std::to_string(asIntNode->Get()) +
+								 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) + "\n"; // Also store result in rax.
 			code += output;
 			// std::cerr << output;
 	
@@ -441,11 +533,11 @@ namespace Body
 			// If the local variable we're copying from is larger, truncation will happen here, and a warning will be issued.
 			// If the local variable we're copying from is smaller, we'll include values outside of the variable which happen to be there on the stack, and this will be even worse.
 			// TODO: The types might be the same size though, in which case this isn't a truncation. Split this out into two checks - One for signed-unsigned mismatch, the other for truncation.
-			if (exprType != entry->type)
+			if (exprType != entry->asVar.type)
 			{
 				wprintf(L"WARNING: Truncation or signed-unsigned mismatch when trying to copy %s into temporary.\n"\
 						L"Assignee has type %s, local var has type %s.\n\n",
-						entry->name.c_str(), PrimitiveTypeReflectionWide[(ui16)exprType], PrimitiveTypeReflectionWide[(ui16)entry->type]
+						entry->name.c_str(), PrimitiveTypeReflectionWide[(ui16)exprType], PrimitiveTypeReflectionWide[(ui16)entry->asVar.type]
 				);
 
 				code += "\n; WARNING - Truncation or signed-unsigned mismatch";
@@ -453,7 +545,7 @@ namespace Body
 
 			// We must figure out whichever one is smaller. The temporary will still have exprType as it's type, but when we get the value
 			// into rax we need to use the appropriate size (QWORD PTR/DWORD PTR ... and RAX/EAX/AX ...)
-			PrimitiveType smallestType = exprSize < entry->size ? exprType : entry->type;
+			const PrimitiveType smallestType = exprSize < entry->asVar.size ? exprType : entry->asVar.type;
 
 			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
 
@@ -467,19 +559,147 @@ namespace Body
 			// If this is the case, readReg must also be changed from AX to RAX, so this ugly hackaround does that to.
 			// TODO: Refactor this.
 			std::string movToRaxOp("mov ");
-			if (entry->type == PrimitiveType::ui16 || entry->type == PrimitiveType::i16)
+			if (entry->asVar.type == PrimitiveType::ui16 || entry->asVar.type == PrimitiveType::i16)
 			{
 				movToRaxOp = "movzx ";
 				readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
 			}
 
-			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->stackLocation) + ")\n" +
-								 movToRaxOp + readReg + ", " + RefLocalVar(entry->stackLocation, smallestType) +
-								 "\nmov " + RefTempVar(t0.place, exprType) + ", " + writeReg + "\n";
+			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
+								 movToRaxOp + readReg + ", " + RefLocalVar(entry->asVar.adress, smallestType) +
+								 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + writeReg + "\n";
 
 			code += output;
 			// std::cerr << output;
+
+			break;
 		}
+		case Node_k::FunctionCallNode:
+		{
+			AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
+
+			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
+
+			// We've already made sure in the harvest pass that this is indeed a function, and in the semantics pass that this function can be called.
+			std::string output;
+
+			PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+			PushArgsIntoRegs(output, asFunctionCallNode);
+
+			// Get the mangled function name!
+			std::string mangledFunctionName = std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()));
+
+			// Make sure to also store the result out into _t0.
+			output += "; " + t0.name + " = result of function " + mangledFunctionName + "\n" +
+					  "call " + mangledFunctionName + "\n" +
+					  "mov " + RefTempVar(t0.adress, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
+
+			code += output;
+
+			break;
+		}
+		}
+	}
+
+	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node)
+	{
+		// Returns the default int type for int literal nodes, the var type of symnodes' symtable entries and
+		// function return type of function call nodes. That should be it for stuff that can appear in expressions.
+		const auto GetTypeFromNode = [](AST::Node* n) -> const PrimitiveType {
+			switch (n->GetNodeKind())
+			{
+			case Node_k::IntNode:
+			{
+				return AST::IntNode::s_defaultIntLiteralType;
+				break;
+			}
+			case Node_k::SymNode:
+			{
+				AST::SymNode* asSymNode = (AST::SymNode*)n;
+				SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asSymNode->GetName(), 1));
+				return entry->asVar.type;
+				break;
+			}
+			case Node_k::FunctionCallNode:
+			{
+				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)n;
+				SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), 1));
+				return entry->asFunction.retType;
+				break;
+			}
+			default:
+			{
+				wprintf(L"ERROR: No type deducible from node n in " __FUNCSIG__ "\n");
+				Exit(ErrCodes::unknown_type);
+				break;
+			}
+			}
+		};
+
+		static const RG callingConvention[] = {
+			RG::RCX,
+			RG::RDX,
+			RG::R8,
+			RG::R9
+		};
+		// Keeps track of how far we've gotten into the calling-convention registers/stack.
+		relptr_t nextSlot = 0;
+
+		for (AST::Node* arg = node->GetArgs(); arg != nullptr; arg = arg->GetRightSibling())
+		{
+			const PrimitiveType exprType = GetTypeFromNode(arg);
+
+			// We need to generate the code for the values we're pushing before we push them.
+			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+			GenOpNodeCode(code, arg, t0, exprType);
+
+			const std::string& reg = GetReg(callingConvention[nextSlot], exprType);
+			code += "; Push " + t0.name + " into " + reg + "\n"
+					"mov " + reg + ", " + RefTempVar(t0.adress, exprType) + "\n\n";
+
+
+			// TODO: In the future we might want to support more than 4 arguments.
+			if (!(nextSlot < GetArraySize(callingConvention)))
+			{
+				wprintf(L"WARNING: Ran out of registers while trying to call function %s.\n", node->GetName().c_str());
+				break;
+			}
+			nextSlot++;
+		}
+	}
+
+	// Retrieves args(if any) by pushing the registers according to the calling convention out to the arg variables.
+	inline static void RetrieveArgs(std::string& code, AST::FunctionNode* functionNode)
+	{
+		static const RG callingConvention[] = {
+			RG::RCX,
+			RG::RDX,
+			RG::R8,
+			RG::R9
+		};
+
+		relptr_t nextSlot = 0;
+
+		for (AST::Node* node = functionNode->GetArgsList(); node != nullptr; node = node->GetRightSibling())
+		{
+			AST::ArgNode* asArgNode = (AST::ArgNode*)node;
+
+			std::wstring composedKey = g_symTable.ComposeKey(asArgNode->GetName(), 1);
+			SymTabEntry* entry = g_symTable.RetrieveSymbol(composedKey);
+
+			std::string readReg(GetReg(callingConvention[nextSlot], entry->asVar.type));
+			std::string movToRaxOp("mov ");
+
+			code += movToRaxOp + RefLocalVar(entry->asVar.adress, entry->asVar.type) + ", " + readReg + "\n";
+
+
+			// TODO: In the future we might want to support more than 4 arguments.
+			if (!(nextSlot < GetArraySize(callingConvention)))
+			{
+				wprintf(L"WARNING: Ran out of registers while trying to retrieve args for function %s.\n", functionNode->GetName().c_str());
+				break;
+			}
+			nextSlot++;
 		}
 	}
 	
@@ -500,8 +720,8 @@ namespace Body
 			{
 				// This is just a lone op node without assignment, but we'll perform the evaluation.
 				// Because of this, we're supplying the default type.
-				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
-				GenOpNodeCode(code, node, t0, TempVar::s_defaultType);
+				TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
+				GenOpNodeCode(code, node, t0, TempVar::s_tempVarDefaultType);
 				
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
 				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
@@ -535,12 +755,12 @@ namespace Body
 					}
 
 
-					stackLocation = entry->stackLocation;
-					exprType = entry->type;
+					stackLocation = entry->asVar.adress;
+					exprType = entry->asVar.type;
 				}
 
 				// Generate operation code. Remember that the temporaries stack section needs to be reset!
-				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
+				TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
 				// The type and size all temporaries involved in this expression will inherit depends on the type we're assigning to, effectively
 				// handling truncation immediately.
 				GenOpNodeCode(code, asAssNode->GetExpr(), t0, exprType);
@@ -570,13 +790,13 @@ namespace Body
 				// The result of the expression we're about to evaluate is stored in rax by default,
 				// so we don't need to do anything more than ensure that the expression's code is generated.
 
-				code += "\n; Return expression(Return i32!):";
+				const PrimitiveType retType = CurrentFunctionMetaData::retType;
+				code += "\n; Return expression(ret_t: " + std::string(PrimitiveTypeReflectionNarrow[(ui16)retType]) + "):\n";
 
 				// Generate operation code. Remember that the temporaries stack section needs to be reset!
 				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
-				// TODO: The type supplied here(s_defaultType/i32) will be too small to hold values gathered from ui64s/i64s.
+				// TODO: The type supplied here from outside(s_defaultType/i32) will be too small to hold values gathered from ui64s/i64s.
 				// In the future, fix this by properly implementing functions, so we may stick it's return type here instead.
-				const PrimitiveType retType = TempVar::s_defaultType;
 				GenOpNodeCode(code, asReturnNode->GetRetExpr(), t0, retType);
 
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
@@ -585,11 +805,20 @@ namespace Body
 				// Add some padding.
 				code += "\n\n";
 
-				// Since we're returning, time to generate the epilogue.
-				CurrentFunctionMetaData::temporariesStackSectionSize = *largestTempAllocation;
-				Epilogue::GenerateFunctionEpilogue(code, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
+				// TODO: We're no longer generating the epilogue when we return. Instead, if we find a return statement(in an if-statement), stick the result in RAX and GOTO(!)
+				// the epilogue of the function, skipping all the other code in between.
+				// On the other hand, if we find a lone return statement that obscures code after it, we just raise an error.
+				// CurrentFunctionMetaData::temporariesStackSectionSize = *largestTempAllocation;
+				// Epilogue::GenerateFunctionEpilogue(code, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
 
 				break;
+			}
+			case Node_k::FunctionCallNode:
+			{
+				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
+				PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+				PushArgsIntoRegs(code, asFunctionCallNode);
+				code += "call " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
 			}
 		}
 	
@@ -647,10 +876,16 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 	outCode = boilerplateHeader;
 	//NOTE /\ is assignment, not += !!!!!
 
-	// Function body, add loop later for each function node to generate every function.
+	for (AST::Node* childNode : nodeHead->GetChildren())
 	{
-		// Epilogue contained in body.
-		std::string prologue, body;
+		if (childNode->GetNodeKind() != Node_k::FunctionNode)
+		{
+			// childNode is a forward declaration node, skip it.
+			continue;
+		}
+		AST::FunctionNode* asFunctionNode = (AST::FunctionNode*)childNode;
+
+		std::string prologue, body, epilogue;
 		
 		// Because we use the stack for temporaries, we need to figure out how much stack space to reserve in the body,
 		// and cannot go on amount of declnodes alone in the prologue function.
@@ -658,21 +893,58 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 
 		// Firstly, figure out the amount of stack space required by local variables, and allocate them.
 		// Results for variables is stored in the symbol table.
-		CurrentFunctionMetaData::varsStackSectionSize = AllocLocals(nodeHead);
+		CurrentFunctionMetaData::varsStackSectionSize = AllocLocals(childNode);
+
+		// Special case for the main function, because you can't define the entrypoint to be whatever with the Microsoft linker.
+		std::string mangledFuncName;
+		if (asFunctionNode->GetName() == std::wstring(WideMainFunctionName))
+		{
+			// Stick the main function name (in BCL) in there as a comment.
+			mangledFuncName = "; main (In BCL: " + std::string(NarrowMainFunctionName) + ")\nmain";
+		}
+		else
+		{
+			char* nameCStr = MangleFunctionName(asFunctionNode->GetName().c_str());
+			mangledFuncName = std::string(nameCStr);
+			free(nameCStr);
+		}
+		CurrentFunctionMetaData::funcName = mangledFuncName;
+		CurrentFunctionMetaData::retType = asFunctionNode->GetRetType();
 
 		// We need to get the biggest size the stack will ever grow to so we can enforce our allocation policy.
 		// Without this we'd allocate more and more stack size for each expression evaluation, even though temporaries should start back at 0 when evaluating a new expression.
 		i32 largestTemporariesAlloc = 0;
 
-		body += "\n\n\n; Body\n";
-		Body::GenerateFunctionBody(body, nodeHead, &largestTemporariesAlloc);
+		body = "\n\n\n; Body\n";
+		Body::RetrieveArgs(body, asFunctionNode);
+		Body::GenerateFunctionBody(body, childNode, &largestTemporariesAlloc);
 
 		CurrentFunctionMetaData::temporariesStackSectionSize = largestTemporariesAlloc;
 
-		prologue += "\n\n\n; Prologue\n";
-		Prologue::GenerateFunctionPrologue(prologue, nodeHead, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
+		prologue = "\n\n\n; Prologue\n";
+		Prologue::GenerateFunctionPrologue(
+			prologue,
+			CurrentFunctionMetaData::varsStackSectionSize,
+			CurrentFunctionMetaData::temporariesStackSectionSize,
+			CurrentFunctionMetaData::funcName
+		);
+
+		epilogue = "\n\n\n; Epilogue\n";
+		Epilogue::GenerateFunctionEpilogue(
+			epilogue,
+			CurrentFunctionMetaData::varsStackSectionSize,
+			CurrentFunctionMetaData::temporariesStackSectionSize,
+			CurrentFunctionMetaData::funcName
+		);
 	
-		outCode += prologue + body;
+
+		outCode += prologue + body + epilogue;
+
+		ResetFunctionMetaData(
+			&CurrentFunctionMetaData::varsStackSectionSize,
+			&CurrentFunctionMetaData::temporariesStackSectionSize,
+			&CurrentFunctionMetaData::funcName
+		);
 	}
 
 	Boilerplate::GenerateFooter(boilerplateFooter);

@@ -36,3 +36,9 @@ __forceinline bool IsStringAscii(const wchar_t* wideStr, ui16 strLen)
 
 	return true;
 }
+
+// Same procedure as above, only that this is for one char.
+__forceinline bool IsUnicode(wchar_t chr)
+{
+	return chr > 127;
+}

@@ -16,7 +16,11 @@ enum class Node_k : ui16
 	AssNode,
 	ScopeNode,
 	DeclNode,
-	ReturnNode
+	ReturnNode,
+	FunctionNode,
+	ArgNode,
+	FunctionCallNode,
+	FwdDeclNode
 };
 
 namespace AST
@@ -45,7 +49,9 @@ namespace AST
 		virtual std::vector<Node*> GetChildren(void);
 
 		inline const Node_k GetNodeKind(void) const { return kind; }
+		inline Node* GetRightSibling(void) const { return rSibling; }
 		inline const bool HasRightSiblings(void) const { return rSibling != nullptr; }
+		inline void UnbindChildren(void) { lmostChild = nullptr; }
 
 		friend Node* MakeNullNode();
 		friend void DoForAllChildren(Node*, void(*)(Node*, void*), void*);
@@ -79,6 +85,8 @@ namespace AST
 		virtual ~IntNode() override = default;
 		inline const ui64 Get(void) const { return n; }
 		friend Node* MakeIntNode(i32);
+
+		static const PrimitiveType s_defaultIntLiteralType = PrimitiveType::i32;
 
 	private:
 
@@ -203,5 +211,79 @@ namespace AST
 		// Should always be an opnode, but this is enforced(warned about if it is not adhered to) in the makenode-function.
 		Node* retExpr;
 
+	};
+
+	// Represents an entire function. The node is it's head, and it's children the body.
+	class FunctionNode : public Node
+	{
+	public:
+
+		FunctionNode() = default;
+		virtual ~FunctionNode() override = default;
+		virtual std::vector<Node*> GetChildren(void) override;
+		inline const std::wstring& GetName(void) const { return name; }
+		inline const PrimitiveType GetRetType(void) const { return retType; }
+		inline Node* GetArgsList(void) const { return argsList; }
+		friend Node* MakeFunctionNode(PrimitiveType, std::wstring*, Node*);
+
+	private:
+
+		std::wstring name;
+		PrimitiveType retType;
+
+		// argsList is possibly null, in which case the function has a single 'Nihil' in the parameter list, e.g. "i32 main(Nihil)".
+		Node* argsList;
+	};
+
+	// Represents a single argument in an argument list. The list itself is made by using rSiblings. Not much different to SymNodes yet.
+	class ArgNode : public Node
+	{
+	public:
+
+		ArgNode() = default;
+		virtual ~ArgNode() override = default;
+		inline const std::wstring& GetName(void) const { return c; }
+		inline const PrimitiveType GetType(void) const { return type; }
+		friend Node* MakeArgNode(PrimitiveType, std::wstring*);
+
+	private:
+
+		std::wstring c;
+		PrimitiveType type;
+	};
+
+	// Represents the result of calling a function.
+	class FunctionCallNode : public Node
+	{
+	public:
+
+		FunctionCallNode() = default;
+		virtual ~FunctionCallNode() override = default;
+		inline const std::wstring& GetName(void) const { return c; }
+		inline Node* GetArgs(void) const { return args; }
+		friend Node* MakeFunctionCallNode(std::wstring*, Node*);
+
+	private:
+
+		std::wstring c;
+		Node* args;
+	};
+
+	class FwdDeclNode : public Node
+	{
+	public:
+		FwdDeclNode() = default;
+		virtual ~FwdDeclNode() override = default;
+
+		inline const std::wstring& GetName(void) const { return name; }
+		inline const PrimitiveType GetRetType(void) const { return retType; }
+		inline Node* GetArgsList(void) const { return argsList; }
+		friend Node* MakeFwdDeclNode(PrimitiveType, std::wstring*, Node*);
+
+	private:
+
+		std::wstring name;
+		PrimitiveType retType;
+		Node* argsList;
 	};
 }

@@ -6,12 +6,23 @@
 struct SymTabEntry
 {
 	std::wstring name;
-	PrimitiveType type;
 
-	ui32 size;
+	bool isFunction;
+	union
+	{
+		struct
+		{
+			PrimitiveType type;
+			ui32 size;
+			// Filled in codegen.cpp
+			ui32 adress;
+		} asVar;
 
-	// Filled in codegen.cpp
-	ui32 stackLocation;
+		struct
+		{
+			PrimitiveType retType;
+		} asFunction;
+	};
 };
 
 /*
@@ -39,12 +50,14 @@ public:
 
 	std::wstring ComposeKey(const std::wstring& name, i16 scopeDepth);
 
-	void EnterSymbol(const std::wstring& name, PrimitiveType type, ui32 size);
+	void EnterSymbol(const std::wstring& name, PrimitiveType type, ui32 size, const bool isFunction);
 
 	// The key here should be composed with ComposeKey already.
 	SymTabEntry* RetrieveSymbol(const std::wstring& composedKey);
 
 	// bool DeclaredLocally(const std::wstring& key);
+
+	static const i16 s_globalNamespace = 0;
 
 private:
 
