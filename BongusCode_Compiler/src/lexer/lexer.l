@@ -24,6 +24,7 @@ COMMENT			"||"[^\n]*
 WHITESPACE		[[:space:]]+
 
 KWD_NIHIL		"nihil"
+SYM_PTR			¤
 KWD_UI8			"ui8"
 KWD_I8			"i8"
 KWD_UI16		"ui16"
@@ -61,6 +62,10 @@ COMMA			\,
 {KWD_NIHIL}
 	LEXLOG(L"Found KWD_NIHIL: %s\n", wstr().c_str());
 	return BTok::KWD_NIHIL;
+
+{SYM_PTR}
+	LEXLOG(L"Found SYM_PTR: %s\n", wstr().c_str());
+	return BTok::SYM_PTR;
 
 {KWD_UI8}
 	LEXLOG(L"Found KWD_UI8: %s\n", wstr().c_str());

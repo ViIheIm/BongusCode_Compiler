@@ -98,7 +98,7 @@ inline const wchar_t* PrimitiveTypeReflectionWide[] = {
 
 
 #pragma region PrimitiveTypesList
-#define LIST(X) X(invalid) X(nihil) X(ui8) X(i8) X(ui16) X(i16) X(ui32) X(i32) X(ui64) X(i64)
+#define LIST(X) X(invalid) X(nihil) X(pointer) X(ui8) X(i8) X(ui16) X(i16) X(ui32) X(i32) X(ui64) X(i64)
 #pragma endregion
 
 #define X(val) val,
