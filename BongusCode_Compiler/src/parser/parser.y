@@ -53,6 +53,7 @@
 %token <num> NUM_LIT
 
 %token KWD_NIHIL
+%token SYM_PTR
 %token KWD_UI8
 %token KWD_I8
 %token KWD_UI16
@@ -231,6 +232,8 @@ type: KWD_UI16						{ $$ = PrimitiveType::ui16; }
 	| KWD_I64						{ $$ = PrimitiveType::i64;	}
 
 	| KWD_NIHIL						{ $$ = PrimitiveType::nihil; }
+
+	| type SYM_PTR		{ $$ = PrimitiveType::pointer; }
 	;
 //!Variable declaration -----------------------------------------------------------------------
 

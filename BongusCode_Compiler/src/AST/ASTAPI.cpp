@@ -96,6 +96,11 @@ AST::Node* AST::MakeDeclNode(std::wstring* s, PrimitiveType type)
         node->size = 8;
         break;
     }
+    case PrimitiveType::pointer:
+    {
+        node->size = 8;
+        break;
+    }
     default:
     {
         node->size = -1;
