@@ -274,6 +274,7 @@ namespace AST
 
 		FunctionCallNode() = default;
 		virtual ~FunctionCallNode() override = default;
+		virtual std::vector<Node*> GetChildren(void) override;
 		inline const std::wstring& GetName(void) const { return c; }
 		inline Node* GetArgs(void) const { return args; }
 		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }

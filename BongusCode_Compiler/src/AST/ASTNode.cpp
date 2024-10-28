@@ -173,3 +173,21 @@ std::vector<AST::Node*> AST::FunctionNode::GetChildren(void)
 
     return res;
 }
+
+std::vector<AST::Node*> AST::FunctionCallNode::GetChildren(void)
+{
+  // Run base implementation first.
+  std::vector<Node*> res = Node::GetChildren();
+
+  if (args != nullptr)
+  {
+    res.push_back(args);
+
+    for (Node* nextNode = args->GetRightSibling(); nextNode != nullptr; nextNode = nextNode->GetRightSibling())
+    {
+      res.push_back(nextNode);
+    }
+  }
+
+  return res;
+}
