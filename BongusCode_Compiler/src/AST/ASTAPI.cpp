@@ -18,6 +18,7 @@ AST::Node* AST::MakeSymNode(std::wstring* s)
     assert(node && "Failed to allocate sym node");
     node->c = *s;
     node->kind = Node_k::SymNode;
+    node->entry = nullptr;
 
     // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
     delete s;
@@ -61,6 +62,7 @@ AST::Node* AST::MakeDeclNode(std::wstring* s, PrimitiveType type)
     node->c = *s;
     node->t = type;
     node->kind = Node_k::DeclNode;
+    node->entry = nullptr;
     
     // Figure out size.
     switch (type)
@@ -140,6 +142,8 @@ AST::Node* AST::MakeFunctionNode(PrimitiveType retType, std::wstring* s, Node* a
     // In the case of a Nihil arg (e.g. i32 main(Nihil)), argsListNode will be nullptr, so that is perfectly valid behaviour.
     node->argsList = argsListNode;
 
+    node->entry = nullptr;
+
     // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
     delete s;
 
@@ -153,6 +157,7 @@ AST::Node* AST::MakeArgNode(PrimitiveType type, std::wstring* s)
     node->c = *s;
     node->kind = Node_k::ArgNode;
     node->type = type;
+    node->entry = nullptr;
 
     // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
     delete s;
@@ -184,6 +189,8 @@ AST::Node* AST::MakeFwdDeclNode(PrimitiveType retType, std::wstring* s, Node* ar
 
     // In the case of a Nihil arg (e.g. i32 main(Nihil)), argsListNode will be nullptr, so that is perfectly valid behaviour.
     node->argsList = argsListNode;
+
+    node->entry = nullptr;
 
     // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
     delete s;

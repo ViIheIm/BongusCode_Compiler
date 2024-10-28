@@ -27,8 +27,12 @@ static void ProcessNode(AST::Node* n)
         case Node_k::DeclNode:
         {
             AST::DeclNode* asDeclNode = (AST::DeclNode*)n;
+
             asDeclNode->SetScopeDepth(symtab.GetScopeDepth());
-            symtab.EnterSymbol(asDeclNode->GetName(), asDeclNode->GetType(), asDeclNode->GetSize(), false);
+            SymTabEntry* newEntry = symtab.EnterSymbol(asDeclNode->GetName(), asDeclNode->GetType(), asDeclNode->GetSize(), false);
+
+            // Connect declaration with the newly entered symbol table entry.
+            asDeclNode->SetSymTabEntry(newEntry);
 
             if (asDeclNode->GetType() == PrimitiveType::nihil)
             {
@@ -49,13 +53,18 @@ static void ProcessNode(AST::Node* n)
                 wprintf(L"ERROR: Undeclared symbol: %s\n", asSymNode->GetName().c_str());
                 Exit(ErrCodes::undeclared_symbol);
             }
+
+            asSymNode->SetSymTabEntry(sym);
+
             break;
         }
 
         case Node_k::FwdDeclNode:
         {
             AST::FwdDeclNode* asFwdDeclNode = (AST::FwdDeclNode*)n;
-            symtab.EnterSymbol(asFwdDeclNode->GetName(), asFwdDeclNode->GetRetType(), 0, true);
+            SymTabEntry* newEntry = symtab.EnterSymbol(asFwdDeclNode->GetName(), asFwdDeclNode->GetRetType(), 0, true);
+            
+            asFwdDeclNode->SetSymTabEntry(newEntry);
 
             break;
         }
@@ -65,10 +74,13 @@ static void ProcessNode(AST::Node* n)
             AST::FunctionNode* asFunctionNode = (AST::FunctionNode*)n;
 
             // If the entry already exists within the symbol table, then this function has been forward declared.
-            if (symtab.RetrieveSymbol(symtab.ComposeKey(asFunctionNode->GetName(), SymTable::s_globalNamespace)) == nullptr)
+            SymTabEntry* entryCandidate = symtab.RetrieveSymbol(symtab.ComposeKey(asFunctionNode->GetName(), SymTable::s_globalNamespace));
+            if (entryCandidate == nullptr)
             {
-                symtab.EnterSymbol(asFunctionNode->GetName(), asFunctionNode->GetRetType(), 0, true);
+                entryCandidate = symtab.EnterSymbol(asFunctionNode->GetName(), asFunctionNode->GetRetType(), 0, true);
             }
+
+            asFunctionNode->SetSymTabEntry(entryCandidate);
 
             break;
         }
@@ -85,7 +97,19 @@ static void ProcessNode(AST::Node* n)
                 Exit(ErrCodes::undeclared_symbol);
             }
 
+            asFunctionCallNode->SetSymTabEntry(entry);
+
             break;
+        }
+
+        case Node_k::ArgNode:
+        {
+          AST::ArgNode* asArgNode = (AST::ArgNode*)n;
+          SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asArgNode->GetName(), 1));
+
+          asArgNode->SetSymTabEntry(entry);
+          
+          break;
         }
     }
     for (AST::Node* childnode : n->GetChildren())

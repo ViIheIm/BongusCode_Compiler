@@ -164,6 +164,11 @@ std::vector<AST::Node*> AST::FunctionNode::GetChildren(void)
     if (argsList != nullptr)
     {
         res.push_back(argsList);
+
+        for (Node* nextNode = argsList->GetRightSibling(); nextNode != nullptr; nextNode = nextNode->GetRightSibling())
+        {
+          res.push_back(nextNode);
+        }
     }
 
     return res;

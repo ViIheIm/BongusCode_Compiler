@@ -50,7 +50,7 @@ public:
 
 	std::wstring ComposeKey(const std::wstring& name, i16 scopeDepth);
 
-	void EnterSymbol(const std::wstring& name, PrimitiveType type, ui32 size, const bool isFunction);
+	SymTabEntry* EnterSymbol(const std::wstring& name, PrimitiveType type, ui32 size, const bool isFunction);
 
 	// The key here should be composed with ComposeKey already.
 	SymTabEntry* RetrieveSymbol(const std::wstring& composedKey);

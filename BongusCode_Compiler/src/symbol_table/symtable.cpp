@@ -15,9 +15,8 @@ std::wstring SymTable::ComposeKey(const std::wstring& name, i16 scopeDepth)
 	return std::wstring(name + std::wstring(L".") + std::to_wstring(scopeDepth));
 }
 
-void SymTable::EnterSymbol(const std::wstring& name, PrimitiveType type, ui32 size, const bool isFunction)
+SymTabEntry* SymTable::EnterSymbol(const std::wstring& name, PrimitiveType type, ui32 size, const bool isFunction)
 {
-	// SymTabEntry entry{ .name = name, .type = type, .size = size, .adress = 0, .isFunction = isFunction };
 	SymTabEntry entry;
 	entry.name = name;
 	entry.isFunction = isFunction;
@@ -35,6 +34,8 @@ void SymTable::EnterSymbol(const std::wstring& name, PrimitiveType type, ui32 si
 	std::wstring composedKey = ComposeKey(name, depth);
 
 	table.insert(std::pair{ composedKey, entry });
+
+	return RetrieveSymbol(composedKey);
 }
 
 SymTabEntry* SymTable::RetrieveSymbol(const std::wstring& composedKey)
