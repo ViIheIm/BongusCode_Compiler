@@ -2,6 +2,7 @@
 #include "../Definitions.h"
 #include "../BongusTable.h"
 #include "ASTAPI.h"
+#include "../symbol_table/symtable.h"
 #include <vector>
 
 class NodeVisitor;
@@ -22,6 +23,7 @@ enum class Node_k : ui16
 	FunctionCallNode,
 	FwdDeclNode
 };
+
 
 namespace AST
 {
@@ -102,11 +104,14 @@ namespace AST
 		SymNode() = default;
 		virtual ~SymNode() override = default;
 		inline const std::wstring& GetName(void) const { return c; }
+		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
+		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
 		friend Node* MakeSymNode(std::wstring*);
 
 	private:
 
 		std::wstring c;
+		SymTabEntry* entry;
 	};
 
 
@@ -185,6 +190,8 @@ namespace AST
 		inline const i16 GetSize(void) const { return size; }
 		inline const i16 GetScopeDepth(void) const { return scopeDepth; }
 		inline void SetScopeDepth(const i16 depth) { scopeDepth = depth; }
+		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
+		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
 		friend Node* MakeDeclNode(std::wstring*, PrimitiveType);
 
 	private:
@@ -193,6 +200,7 @@ namespace AST
 		PrimitiveType t;
 		i16 size;
 		i16 scopeDepth;
+		SymTabEntry* entry;
 	};
 
 	// Represents a return operation.
@@ -224,6 +232,8 @@ namespace AST
 		inline const std::wstring& GetName(void) const { return name; }
 		inline const PrimitiveType GetRetType(void) const { return retType; }
 		inline Node* GetArgsList(void) const { return argsList; }
+		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
+		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
 		friend Node* MakeFunctionNode(PrimitiveType, std::wstring*, Node*);
 
 	private:
@@ -233,6 +243,8 @@ namespace AST
 
 		// argsList is possibly null, in which case the function has a single 'Nihil' in the parameter list, e.g. "i32 main(Nihil)".
 		Node* argsList;
+
+		SymTabEntry* entry;
 	};
 
 	// Represents a single argument in an argument list. The list itself is made by using rSiblings. Not much different to SymNodes yet.
@@ -244,12 +256,15 @@ namespace AST
 		virtual ~ArgNode() override = default;
 		inline const std::wstring& GetName(void) const { return c; }
 		inline const PrimitiveType GetType(void) const { return type; }
+		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
+		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
 		friend Node* MakeArgNode(PrimitiveType, std::wstring*);
 
 	private:
 
 		std::wstring c;
 		PrimitiveType type;
+		SymTabEntry* entry;
 	};
 
 	// Represents the result of calling a function.
@@ -261,12 +276,16 @@ namespace AST
 		virtual ~FunctionCallNode() override = default;
 		inline const std::wstring& GetName(void) const { return c; }
 		inline Node* GetArgs(void) const { return args; }
+		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
+		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
 		friend Node* MakeFunctionCallNode(std::wstring*, Node*);
 
 	private:
 
 		std::wstring c;
 		Node* args;
+
+		SymTabEntry* entry;
 	};
 
 	class FwdDeclNode : public Node
@@ -278,6 +297,8 @@ namespace AST
 		inline const std::wstring& GetName(void) const { return name; }
 		inline const PrimitiveType GetRetType(void) const { return retType; }
 		inline Node* GetArgsList(void) const { return argsList; }
+		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
+		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
 		friend Node* MakeFwdDeclNode(PrimitiveType, std::wstring*, Node*);
 
 	private:
@@ -285,5 +306,7 @@ namespace AST
 		std::wstring name;
 		PrimitiveType retType;
 		Node* argsList;
+
+		SymTabEntry* entry;
 	};
 }

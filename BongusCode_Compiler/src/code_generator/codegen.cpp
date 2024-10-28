@@ -154,9 +154,11 @@ void ProcessLocalsCallback(AST::Node* n, void* args)
 	{
 		AST::DeclNode* asDeclNode = (AST::DeclNode*)n;
 
-		std::wstring key = g_symTable.ComposeKey(asDeclNode->GetName(), asDeclNode->GetScopeDepth());
-		SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+		//std::wstring key = g_symTable.ComposeKey(asDeclNode->GetName(), asDeclNode->GetScopeDepth());
+		//SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+		SymTabEntry* entry = asDeclNode->GetSymTabEntry();
 		entry->asVar.adress = *allocSize;
+
 
 		*allocSize += asDeclNode->GetSize();
 	}
@@ -520,8 +522,9 @@ namespace Body
 		{
 			AST::SymNode* asSymNode = (AST::SymNode*)node;
 
-			std::wstring key = g_symTable.ComposeKey(asSymNode->GetName(), 1); // TODO: Restructure symbol table.
-			SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+			//std::wstring key = g_symTable.ComposeKey(asSymNode->GetName(), 1); // TODO: Restructure symbol table.
+			//SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+			SymTabEntry* entry = asSymNode->GetSymTabEntry();
 
 			if (entry == nullptr)
 			{
@@ -583,7 +586,8 @@ namespace Body
 			// We've already made sure in the harvest pass that this is indeed a function, and in the semantics pass that this function can be called.
 			std::string output;
 
-			PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+			//PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+			PrimitiveType funcRetType = asFunctionCallNode->GetSymTabEntry()->asFunction.retType;
 			PushArgsIntoRegs(output, asFunctionCallNode);
 
 			// Get the mangled function name!
@@ -616,14 +620,16 @@ namespace Body
 			case Node_k::SymNode:
 			{
 				AST::SymNode* asSymNode = (AST::SymNode*)n;
-				SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asSymNode->GetName(), 1));
+				//SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asSymNode->GetName(), 1));
+				SymTabEntry* entry = asSymNode->GetSymTabEntry();
 				return entry->asVar.type;
 				break;
 			}
 			case Node_k::FunctionCallNode:
 			{
 				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)n;
-				SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), 1));
+				//SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), 1));
+				SymTabEntry* entry = asFunctionCallNode->GetSymTabEntry();
 				return entry->asFunction.retType;
 				break;
 			}
@@ -684,8 +690,9 @@ namespace Body
 		{
 			AST::ArgNode* asArgNode = (AST::ArgNode*)node;
 
-			std::wstring composedKey = g_symTable.ComposeKey(asArgNode->GetName(), 1);
-			SymTabEntry* entry = g_symTable.RetrieveSymbol(composedKey);
+			//std::wstring composedKey = g_symTable.ComposeKey(asArgNode->GetName(), 1);
+			//SymTabEntry* entry = g_symTable.RetrieveSymbol(composedKey);
+			SymTabEntry* entry = asArgNode->GetSymTabEntry();
 
 			std::string readReg(GetReg(callingConvention[nextSlot], entry->asVar.type));
 			std::string movToRaxOp("mov ");
@@ -745,8 +752,9 @@ namespace Body
 				{
 					AST::SymNode* var = (AST::SymNode*)asAssNode->GetVar();
 
-					std::wstring key = g_symTable.ComposeKey(var->GetName(), 1); // TODO: Restructure symbol table.
-					SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+					//std::wstring key = g_symTable.ComposeKey(var->GetName(), 1); // TODO: Restructure symbol table.
+					//SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+					SymTabEntry* entry = var->GetSymTabEntry();
 
 					if (entry == nullptr)
 					{
@@ -816,7 +824,10 @@ namespace Body
 			case Node_k::FunctionCallNode:
 			{
 				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
-				PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+				
+				//PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+				PrimitiveType funcRetType = asFunctionCallNode->GetSymTabEntry()->asFunction.retType;
+				
 				PushArgsIntoRegs(code, asFunctionCallNode);
 				code += "call " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
 			}
