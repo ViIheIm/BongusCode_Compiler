@@ -77,6 +77,18 @@ namespace AST
 		Node_k kind;
 	};
 
+	// Superclass for nodes that need symbol table access to derive from.
+	class SymTableAccessor
+	{
+	public:
+
+		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
+		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
+
+	protected:
+
+		SymTabEntry* entry;
+	};
 
 	// Represents raw literals.
 	class IntNode : public Node
@@ -97,21 +109,18 @@ namespace AST
 
 
 	// Represents IDs like variables.
-	class SymNode : public Node
+	class SymNode : public Node, public SymTableAccessor
 	{
 	public:
 
 		SymNode() = default;
 		virtual ~SymNode() override = default;
 		inline const std::wstring& GetName(void) const { return c; }
-		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
-		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
 		friend Node* MakeSymNode(std::wstring*);
 
 	private:
 
 		std::wstring c;
-		SymTabEntry* entry;
 	};
 
 
@@ -179,7 +188,7 @@ namespace AST
 
 
 	// Represents only the declaration of a variable.
-	class DeclNode : public Node
+	class DeclNode : public Node, public SymTableAccessor
 	{
 	public:
 
@@ -190,8 +199,6 @@ namespace AST
 		inline const i16 GetSize(void) const { return size; }
 		inline const i16 GetScopeDepth(void) const { return scopeDepth; }
 		inline void SetScopeDepth(const i16 depth) { scopeDepth = depth; }
-		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
-		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
 		friend Node* MakeDeclNode(std::wstring*, PrimitiveType);
 
 	private:
@@ -200,7 +207,6 @@ namespace AST
 		PrimitiveType t;
 		i16 size;
 		i16 scopeDepth;
-		SymTabEntry* entry;
 	};
 
 	// Represents a return operation.
@@ -216,13 +222,12 @@ namespace AST
 
 	private:
 
-		// Should always be an opnode, but this is enforced(warned about if it is not adhered to) in the makenode-function.
 		Node* retExpr;
 
 	};
 
 	// Represents an entire function. The node is it's head, and it's children the body.
-	class FunctionNode : public Node
+	class FunctionNode : public Node, public SymTableAccessor
 	{
 	public:
 
@@ -232,8 +237,6 @@ namespace AST
 		inline const std::wstring& GetName(void) const { return name; }
 		inline const PrimitiveType GetRetType(void) const { return retType; }
 		inline Node* GetArgsList(void) const { return argsList; }
-		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
-		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
 		friend Node* MakeFunctionNode(PrimitiveType, std::wstring*, Node*);
 
 	private:
@@ -243,12 +246,10 @@ namespace AST
 
 		// argsList is possibly null, in which case the function has a single 'Nihil' in the parameter list, e.g. "i32 main(Nihil)".
 		Node* argsList;
-
-		SymTabEntry* entry;
 	};
 
 	// Represents a single argument in an argument list. The list itself is made by using rSiblings. Not much different to SymNodes yet.
-	class ArgNode : public Node
+	class ArgNode : public Node, public SymTableAccessor
 	{
 	public:
 
@@ -256,19 +257,16 @@ namespace AST
 		virtual ~ArgNode() override = default;
 		inline const std::wstring& GetName(void) const { return c; }
 		inline const PrimitiveType GetType(void) const { return type; }
-		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
-		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
 		friend Node* MakeArgNode(PrimitiveType, std::wstring*);
 
 	private:
 
 		std::wstring c;
 		PrimitiveType type;
-		SymTabEntry* entry;
 	};
 
 	// Represents the result of calling a function.
-	class FunctionCallNode : public Node
+	class FunctionCallNode : public Node, public SymTableAccessor
 	{
 	public:
 
@@ -277,19 +275,15 @@ namespace AST
 		virtual std::vector<Node*> GetChildren(void) override;
 		inline const std::wstring& GetName(void) const { return c; }
 		inline Node* GetArgs(void) const { return args; }
-		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
-		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
 		friend Node* MakeFunctionCallNode(std::wstring*, Node*);
 
 	private:
 
 		std::wstring c;
 		Node* args;
-
-		SymTabEntry* entry;
 	};
 
-	class FwdDeclNode : public Node
+	class FwdDeclNode : public Node, public SymTableAccessor
 	{
 	public:
 		FwdDeclNode() = default;
@@ -298,8 +292,6 @@ namespace AST
 		inline const std::wstring& GetName(void) const { return name; }
 		inline const PrimitiveType GetRetType(void) const { return retType; }
 		inline Node* GetArgsList(void) const { return argsList; }
-		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
-		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
 		friend Node* MakeFwdDeclNode(PrimitiveType, std::wstring*, Node*);
 
 	private:
@@ -307,7 +299,5 @@ namespace AST
 		std::wstring name;
 		PrimitiveType retType;
 		Node* argsList;
-
-		SymTabEntry* entry;
 	};
 }
