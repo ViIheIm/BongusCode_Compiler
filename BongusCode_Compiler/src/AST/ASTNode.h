@@ -197,8 +197,6 @@ namespace AST
 		inline const std::wstring& GetName(void) const { return c; }
 		inline const PrimitiveType GetType(void) const { return t; }
 		inline const i16 GetSize(void) const { return size; }
-		inline const i16 GetScopeDepth(void) const { return scopeDepth; }
-		inline void SetScopeDepth(const i16 depth) { scopeDepth = depth; }
 		friend Node* MakeDeclNode(std::wstring*, PrimitiveType);
 
 	private:
@@ -206,7 +204,6 @@ namespace AST
 		std::wstring c;
 		PrimitiveType t;
 		i16 size;
-		i16 scopeDepth;
 	};
 
 	// Represents a return operation.

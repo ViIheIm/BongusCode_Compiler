@@ -1,18 +1,42 @@
 #include "symtable.h"
 
+const std::wstring SymTable::s_globalNamespace = std::wstring(L"");
+
+SymTable::SymTable() : currentFunction(s_globalNamespace)
+{
+
+}
+
 void SymTable::OpenScope(void)
 {
+	wprintf(L"WARNING: " __FUNCSIG__ " is deprecated.");
 	depth++;
 }
 
 void SymTable::CloseScope(void)
 {
+	wprintf(L"WARNING: " __FUNCSIG__ " is deprecated.");
 	depth--;
 }
 
-std::wstring SymTable::ComposeKey(const std::wstring& name, i16 scopeDepth)
+void SymTable::OpenFunction(const std::wstring& name)
 {
-	return std::wstring(name + std::wstring(L".") + std::to_wstring(scopeDepth));
+	currentFunction += name;
+}
+
+void SymTable::CloseFunction(void)
+{
+	currentFunction = s_globalNamespace;
+}
+
+std::wstring SymTable::ComposeKey(const std::wstring& name)
+{
+	return currentFunction + L"." + name;
+}
+
+std::wstring SymTable::ComposeGlobalKey(const std::wstring& name)
+{
+	return s_globalNamespace + L"." + name;
 }
 
 SymTabEntry* SymTable::EnterSymbol(const std::wstring& name, PrimitiveType type, ui32 size, const bool isFunction)
@@ -31,7 +55,7 @@ SymTabEntry* SymTable::EnterSymbol(const std::wstring& name, PrimitiveType type,
 		entry.asVar.adress = 0;
 	}
 
-	std::wstring composedKey = ComposeKey(name, depth);
+	std::wstring composedKey = ComposeKey(name);
 
 	table.insert(std::pair{ composedKey, entry });
 

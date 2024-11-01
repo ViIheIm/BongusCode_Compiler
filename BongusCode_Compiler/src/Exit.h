@@ -6,6 +6,7 @@ enum class ErrCodes : i32
 	success, // Typically unused
 	malformed_cmd_line,
 	undeclared_symbol,
+	duplicate_symbols,
 	syntax_error,
 	unknown_type,
 	unreachable_code,
@@ -17,6 +18,7 @@ inline const wchar_t* ErrorsToString[] = {
 	L"Success",
 	L"Malformed command line arguments list",
 	L"Undeclared symbol",
+	L"Duplicate symbols",
 	L"Syntax error",
 	L"Unknown type",
 	L"Unreachable code",

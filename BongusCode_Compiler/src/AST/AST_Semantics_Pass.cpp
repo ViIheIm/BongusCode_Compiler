@@ -36,7 +36,8 @@ static void ProcessNode(AST::Node* n)
 			AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)n;
 
 			// We make sure that this entry exists in the harvest pass.
-			SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace));
+			//SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace));
+			SymTabEntry* entry = asFunctionCallNode->GetSymTabEntry();
 
 			if (!entry->isFunction)
 			{
