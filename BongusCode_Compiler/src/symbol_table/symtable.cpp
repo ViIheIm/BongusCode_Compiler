@@ -52,7 +52,7 @@ SymTabEntry* SymTable::EnterSymbol(const std::wstring& name, PrimitiveType type,
 	{
 		entry.asVar.type = type;
 		entry.asVar.size = size;
-		entry.asVar.adress = 0;
+		entry.asVar.adress = -1;
 	}
 
 	std::wstring composedKey = ComposeKey(name);

@@ -51,6 +51,9 @@ namespace AST
 	// makeFwdDeclNode(ret_t, name, argsList) instantiates a forward decl node in a similar manner as to makeFunctionNode.
 	Node* MakeFwdDeclNode(PrimitiveType retType, std::wstring* s, Node* argsListNode);
 
+	// makeAddrOfNode(name) instantiates a node for the address-of operation. Name is assumed to be the name of a valid symbol(variable).
+	Node* MakeAddrOfNode(std::wstring* name);
+
 	// makeNullNode() instantiates a null node that explicitly represents the
 	// absence of structure.For consistency in processing an AST, it is better to
 	// have a null node than to have gaps in the AST or null pointers.

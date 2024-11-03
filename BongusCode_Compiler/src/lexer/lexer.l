@@ -54,6 +54,8 @@ RCURLY			\}
 SEMI			\.
 COMMA			\,
 
+ADDR_OF_OP	&
+
 %%
 
 {COMMENT}
@@ -164,5 +166,9 @@ COMMA			\,
 {COMMA}
 	LEXLOG(L"Found COMMA: %s\n", wstr().c_str());
 	return BTok::COMMA;
+
+{ADDR_OF_OP}
+	LEXLOG(L"Found ADDR_OF_OP: %s\n", wstr().c_str());
+	return BTok::ADDR_OF_OP;
 
 %%

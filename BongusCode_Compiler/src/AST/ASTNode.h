@@ -21,7 +21,8 @@ enum class Node_k : ui16
 	FunctionNode,
 	ArgNode,
 	FunctionCallNode,
-	FwdDeclNode
+	FwdDeclNode,
+	AddrOfNode
 };
 
 
@@ -296,5 +297,17 @@ namespace AST
 		std::wstring name;
 		PrimitiveType retType;
 		Node* argsList;
+	};
+
+	class AddrOfNode : public Node, public SymTableAccessor
+	{
+	public:
+		AddrOfNode() = default;
+		virtual ~AddrOfNode() override = default;
+		inline const std::wstring& GetName(void) const { return name; }
+		friend Node* MakeAddrOfNode(std::wstring*);
+
+	private:
+		std::wstring name;
 	};
 }

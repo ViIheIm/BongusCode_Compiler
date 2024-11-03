@@ -114,6 +114,7 @@ namespace Registers
 		{
 		case PrimitiveType::ui64:
 		case PrimitiveType::i64:
+		case PrimitiveType::pointer:
 			return 0;
 
 		case PrimitiveType::ui32:
@@ -239,6 +240,7 @@ inline static const ui16 GetSizeFromType(const PrimitiveType type)
 	{
 	case PrimitiveType::ui64:
 	case PrimitiveType::i64:
+	case PrimitiveType::pointer:
 		return 8;
 	case PrimitiveType::ui32:
 	case PrimitiveType::i32:
@@ -346,81 +348,49 @@ bool FindNodeInVisitedNodes(AST::Node* node)
 #include <iostream>
 namespace Body
 {
-	inline static std::string RefTempVar(const i32 offset, const PrimitiveType type)
+	inline static std::string GetWordKindFromType(const PrimitiveType type)
 	{
-		// EXAMPLE:
-		// mov eax, DWORD PTR 4[rsp]					// Go past the locals and into the temporaries section of the stack.
-
-		std::string wordKind;
-
-		switch (type)
-		{
-			case PrimitiveType::ui64:
-			case PrimitiveType::i64:
-			{
-				wordKind = "QWORD PTR";
-				break;
-			}
-
-			case PrimitiveType::ui32:
-			case PrimitiveType::i32:
-			{
-				wordKind = "DWORD PTR";
-				break;
-			}
-
-			case PrimitiveType::ui16:
-			case PrimitiveType::i16:
-			{
-				wordKind = "WORD PTR";
-				break;
-			}
-
-			default:
-			{
-				wprintf(L"ERROR: Type %hu supplied to " __FUNCSIG__ " is invalid.\n", type);
-				Exit(ErrCodes::internal_compiler_error);
-				break;
-			}
-		}
-
-		return std::string(wordKind + " " + std::to_string(CurrentFunctionMetaData::varsStackSectionSize + offset) + "[rsp]");
-	}
-	inline static std::string RefLocalVar(const i32 offset, const PrimitiveType type)
-	{
-		std::string wordKind;
-
 		switch (type)
 		{
 		case PrimitiveType::ui64:
 		case PrimitiveType::i64:
+		case PrimitiveType::pointer:
 		{
-			wordKind = "QWORD PTR";
+			return std::string("QWORD PTR");
 			break;
 		}
 
 		case PrimitiveType::ui32:
 		case PrimitiveType::i32:
 		{
-			wordKind = "DWORD PTR";
-			break;
+			return std::string("DWORD PTR");
 		}
 
 		case PrimitiveType::ui16:
 		case PrimitiveType::i16:
 		{
-			wordKind = "WORD PTR";
-			break;
+			return std::string("WORD PTR");
 		}
 
 		default:
 		{
 			wprintf(L"ERROR: Type %hu supplied to " __FUNCSIG__ " is invalid.\n", type);
 			Exit(ErrCodes::internal_compiler_error);
-			break;
 		}
 		}
+	}
 
+	inline static std::string RefTempVar(const i32 offset, const PrimitiveType type)
+	{
+		// EXAMPLE:
+		// mov eax, DWORD PTR 4[rsp]					// Go past the locals and into the temporaries section of the stack.
+
+		std::string wordKind = GetWordKindFromType(type);
+		return std::string(wordKind + " " + std::to_string(CurrentFunctionMetaData::varsStackSectionSize + offset) + "[rsp]");
+	}
+	inline static std::string RefLocalVar(const i32 offset, const PrimitiveType type)
+	{
+		std::string wordKind = GetWordKindFromType(type);
 		return std::string(wordKind + " " + std::to_string(offset) + "[rsp]");
 	}
 
@@ -597,6 +567,25 @@ namespace Body
 			output += "; " + t0.name + " = result of function " + mangledFunctionName + "\n" +
 					  "call " + mangledFunctionName + "\n" +
 					  "mov " + RefTempVar(t0.adress, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
+
+			code += output;
+
+			break;
+		}
+		case Node_k::AddrOfNode:
+		{
+			AST::AddrOfNode* asAddrOfNode = (AST::AddrOfNode*)node;
+			SymTabEntry* entry = asAddrOfNode->GetSymTabEntry();
+			const PrimitiveType addrOfNodeExprType = PrimitiveType::pointer;
+
+			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
+
+			std::string readReg(GetReg(RG::RAX, addrOfNodeExprType));
+			const std::string& writeReg = GetReg(RG::RAX, exprType);
+
+			std::string output = "\n; " + t0.name + " = (addr of local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
+				"lea " + readReg + ", " + RefLocalVar(entry->asVar.adress, addrOfNodeExprType) +
+				"\nmov " + RefTempVar(t0.adress, addrOfNodeExprType) + ", " + writeReg + "\n";
 
 			code += output;
 

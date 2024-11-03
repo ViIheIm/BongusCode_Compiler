@@ -194,6 +194,20 @@ AST::Node* AST::MakeFwdDeclNode(PrimitiveType retType, std::wstring* s, Node* ar
     return node;
 }
 
+AST::Node* AST::MakeAddrOfNode(std::wstring* name)
+{
+  AddrOfNode* node = new AddrOfNode();
+  assert(node && "Failed to allocate addr of node");
+  node->kind = Node_k::AddrOfNode;
+  node->name = *name;
+  node->entry = nullptr;
+
+  // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
+  delete name;
+
+  return node;
+}
+
 AST::Node* AST::MakeNullNode()
 {
     Node* node = new Node();
