@@ -14,8 +14,8 @@ struct SymTabEntry
 		{
 			PrimitiveType type;
 			ui32 size;
-			// Filled in codegen.cpp
-			ui32 adress;
+			// Address is filled in codegen.cpp, and is defaulted to -1 in SymTable::EnterSymbol().
+			i32 adress;
 		} asVar;
 
 		struct

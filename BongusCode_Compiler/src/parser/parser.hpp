@@ -268,7 +268,8 @@ namespace yy {
     LCURLY = 278,                  // LCURLY
     RCURLY = 279,                  // RCURLY
     SEMI = 280,                    // SEMI
-    COMMA = 281                    // COMMA
+    COMMA = 281,                   // COMMA
+    ADDR_OF_OP = 282               // ADDR_OF_OP
       };
       /// Backward compatibility alias (Bison 3.6).
       typedef token_kind_type yytokentype;
@@ -285,7 +286,7 @@ namespace yy {
     {
       enum symbol_kind_type
       {
-        YYNTOKENS = 27, ///< Number of tokens.
+        YYNTOKENS = 28, ///< Number of tokens.
         S_YYEMPTY = -2,
         S_YYEOF = 0,                             // "end of file"
         S_YYerror = 1,                           // error
@@ -314,29 +315,31 @@ namespace yy {
         S_RCURLY = 24,                           // RCURLY
         S_SEMI = 25,                             // SEMI
         S_COMMA = 26,                            // COMMA
-        S_YYACCEPT = 27,                         // $accept
-        S_program = 28,                          // program
-        S_globalEntries = 29,                    // globalEntries
-        S_globalEntry = 30,                      // globalEntry
-        S_function = 31,                         // function
-        S_functionHead = 32,                     // functionHead
-        S_paramList = 33,                        // paramList
-        S_param = 34,                            // param
-        S_fwdDecl = 35,                          // fwdDecl
-        S_scope = 36,                            // scope
-        S_stmts = 37,                            // stmts
-        S_stmt = 38,                             // stmt
-        S_expr = 39,                             // expr
-        S_addExpr = 40,                          // addExpr
-        S_mulExpr = 41,                          // mulExpr
-        S_factor = 42,                           // factor
-        S_varDecl = 43,                          // varDecl
-        S_type = 44,                             // type
-        S_varAss = 45,                           // varAss
-        S_returnOp = 46,                         // returnOp
-        S_functionCall = 47,                     // functionCall
-        S_argsList = 48,                         // argsList
-        S_arg = 49                               // arg
+        S_ADDR_OF_OP = 27,                       // ADDR_OF_OP
+        S_YYACCEPT = 28,                         // $accept
+        S_program = 29,                          // program
+        S_globalEntries = 30,                    // globalEntries
+        S_globalEntry = 31,                      // globalEntry
+        S_function = 32,                         // function
+        S_functionHead = 33,                     // functionHead
+        S_paramList = 34,                        // paramList
+        S_param = 35,                            // param
+        S_fwdDecl = 36,                          // fwdDecl
+        S_scope = 37,                            // scope
+        S_stmts = 38,                            // stmts
+        S_stmt = 39,                             // stmt
+        S_expr = 40,                             // expr
+        S_addExpr = 41,                          // addExpr
+        S_mulExpr = 42,                          // mulExpr
+        S_factor = 43,                           // factor
+        S_varDecl = 44,                          // varDecl
+        S_type = 45,                             // type
+        S_varAss = 46,                           // varAss
+        S_returnOp = 47,                         // returnOp
+        S_functionCall = 48,                     // functionCall
+        S_argsList = 49,                         // argsList
+        S_arg = 50,                              // arg
+        S_addrOfOp = 51                          // addrOfOp
       };
     };
 
@@ -824,8 +827,8 @@ namespace yy {
     /// Constants.
     enum
     {
-      yylast_ = 86,     ///< Last index in yytable_.
-      yynnts_ = 23,  ///< Number of nonterminal symbols.
+      yylast_ = 87,     ///< Last index in yytable_.
+      yynnts_ = 24,  ///< Number of nonterminal symbols.
       yyfinal_ = 15 ///< Termination state number.
     };
 
@@ -837,7 +840,7 @@ namespace yy {
 
 
 } // yy
-#line 841 "parser.hpp"
+#line 844 "parser.hpp"
 
 
 

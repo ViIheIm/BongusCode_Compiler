@@ -111,7 +111,7 @@ static void ProcessNode(AST::Node* n)
 
             if (entry == nullptr)
             {
-                wprintf(L"ERROR: Undeclared symbol: %s\nThere is no function with this name.\n", asFunctionCallNode->GetName().c_str());
+                wprintf(L"ERROR: Undeclared symbol \"%s\"\nThere is no function with this name.\n", asFunctionCallNode->GetName().c_str());
                 Exit(ErrCodes::undeclared_symbol);
             }
 
@@ -127,6 +127,22 @@ static void ProcessNode(AST::Node* n)
 
           asArgNode->SetSymTabEntry(entry);
           
+          break;
+        }
+
+        case Node_k::AddrOfNode:
+        {
+          AST::AddrOfNode* asAddrOfNode = (AST::AddrOfNode*)n;
+          SymTabEntry* entry = symtab.RetrieveSymbol(symtab.ComposeKey(asAddrOfNode->GetName()));
+
+          if (entry == nullptr)
+          {
+            wprintf(L"ERROR: Undeclared symbol \"%s\"\nThere is no variable with this name, you cannot get it's address.\n", asAddrOfNode->GetName().c_str());
+            Exit(ErrCodes::undeclared_symbol);
+          }
+
+          asAddrOfNode->SetSymTabEntry(entry);
+
           break;
         }
     }

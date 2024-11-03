@@ -80,6 +80,8 @@
 %token SEMI
 %token COMMA
 
+%token ADDR_OF_OP
+
 %type<ASTNode> globalEntries
 %type<ASTNode> globalEntry
 %type<ASTNode> functions
@@ -107,6 +109,8 @@
 %type<ASTNode> functionCall
 %type<ASTNode> argsList
 %type<ASTNode> arg
+
+%type<ASTNode> addrOfOp
 
 %type<primtype> type
 
@@ -214,6 +218,7 @@ factor: NUM_LIT						{ $$ = AST::MakeIntNode($1); }
 	  | ID							{ $$ = AST::MakeSymNode($1); }
 	  | LPAREN expr RPAREN			{ $$ = $2; }
 	  | functionCall				{ $$ = $1; }
+		| addrOfOp					{ $$ = $1; }
 	  ;
 //!Mathematical expression --------------------------------------------------------------------
 
@@ -263,6 +268,11 @@ arg: expr								{ $$ = $1; }
 	 ;
 //!Function call ------------------------------------------------------------------------------
 
+
+// Address of ---------------------------------------------------------------------------------
+addrOfOp:	ADDR_OF_OP ID { $$ = AST::MakeAddrOfNode($2); }
+				;
+//!Address of ---------------------------------------------------------------------------------
 %%
 
 
