@@ -39,7 +39,7 @@ std::wstring SymTable::ComposeGlobalKey(const std::wstring& name)
 	return s_globalNamespace + L"." + name;
 }
 
-SymTabEntry* SymTable::EnterSymbol(const std::wstring& name, PrimitiveType type, ui32 size, const bool isFunction)
+SymTabEntry* SymTable::EnterSymbol(const std::wstring& name, const PrimitiveType type, const PrimitiveType pointeeType, ui32 size, const bool isFunction)
 {
 	SymTabEntry entry;
 	entry.name = name;
@@ -53,6 +53,7 @@ SymTabEntry* SymTable::EnterSymbol(const std::wstring& name, PrimitiveType type,
 		entry.asVar.type = type;
 		entry.asVar.size = size;
 		entry.asVar.adress = -1;
+		entry.asVar.pointeeType = pointeeType;
 	}
 
 	std::wstring composedKey = ComposeKey(name);

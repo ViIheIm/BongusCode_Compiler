@@ -18,12 +18,6 @@ static void ProcessNode(AST::Node* n)
     Node_k nodeKind = n->GetNodeKind();
     switch (nodeKind)
     {
-        //case Node_k::ScopeNode:
-        //{
-        //    symtab.OpenScope();
-        //    break;
-        //}
-
         case Node_k::DeclNode:
         {
             AST::DeclNode* asDeclNode = (AST::DeclNode*)n;
@@ -36,7 +30,7 @@ static void ProcessNode(AST::Node* n)
             }
 
             //asDeclNode->SetScopeDepth(symtab.GetScopeDepth());
-            SymTabEntry* newEntry = symtab.EnterSymbol(asDeclNode->GetName(), asDeclNode->GetType(), asDeclNode->GetSize(), false);
+            SymTabEntry* newEntry = symtab.EnterSymbol(asDeclNode->GetName(), asDeclNode->GetType(), asDeclNode->GetPointeeType(), asDeclNode->GetSize(), false);
 
             // Connect declaration with the newly entered symbol table entry.
             asDeclNode->SetSymTabEntry(newEntry);
@@ -73,7 +67,7 @@ static void ProcessNode(AST::Node* n)
             SymTabEntry* entryCandidate = symtab.RetrieveSymbol(symtab.ComposeKey(asFwdDeclNode->GetName()));
             if (entryCandidate == nullptr)
             {
-              entryCandidate = symtab.EnterSymbol(asFwdDeclNode->GetName(), asFwdDeclNode->GetRetType(), 0, true);
+              entryCandidate = symtab.EnterSymbol(asFwdDeclNode->GetName(), asFwdDeclNode->GetRetType(), PrimitiveType::invalid, 0, true);
             }
             
             asFwdDeclNode->SetSymTabEntry(entryCandidate);
@@ -90,7 +84,7 @@ static void ProcessNode(AST::Node* n)
             SymTabEntry* entryCandidate = symtab.RetrieveSymbol(key);
             if (entryCandidate == nullptr)
             {
-                entryCandidate = symtab.EnterSymbol(asFunctionNode->GetName(), asFunctionNode->GetRetType(), 0, true);
+              entryCandidate = symtab.EnterSymbol(asFunctionNode->GetName(), asFunctionNode->GetRetType(), PrimitiveType::invalid, 0, true);
             }
 
             asFunctionNode->SetSymTabEntry(entryCandidate);
@@ -145,16 +139,29 @@ static void ProcessNode(AST::Node* n)
 
           break;
         }
+
+        //case Node_k::DerefNode:
+        //{
+        //  AST::DerefNode* asDerefNode = (AST::DerefNode*)n;
+        //
+        //  SymTabEntry* entry = symtab.RetrieveSymbol(symtab.ComposeKey(asDerefNode->GetName()));
+        //
+        //  if (entry == nullptr)
+        //  {
+        //    wprintf(L"ERROR: Undeclared symbol \"%s\"\nYou cannot dereference this variable -- it doesn't exist.\n", asDerefNode->GetName().c_str());
+        //    Exit(ErrCodes::undeclared_symbol);
+        //  }
+        //
+        //  asDerefNode->SetSymTabEntry(entry);
+        //
+        //  break;
+        //}
     }
     for (AST::Node* childnode : n->GetChildren())
     {
         ProcessNode(childnode);
     }
 
-    //if (nodeKind == Node_k::ScopeNode)
-    //{
-    //    symtab.CloseScope();
-    //}
     if (nodeKind == Node_k::FunctionNode)
     {
       symtab.CloseFunction();

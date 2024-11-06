@@ -111,6 +111,7 @@
 %type<ASTNode> arg
 
 %type<ASTNode> addrOfOp
+%type<ASTNode> derefOp
 
 %type<primtype> type
 
@@ -173,7 +174,8 @@ paramList: paramList COMMA param	{ $1->MakeSiblings($3); $$ = $1; }
 		 | KWD_NIHIL				{ $$ = nullptr; }
 		 ;
 
-param: type ID						{ $$ = AST::MakeArgNode($1, $2); }
+param: type ID						{ $$ = AST::MakeArgNode($2, $1); }
+		 | type SYM_PTR ID		{ $$ = AST::MakeArgNode($3, PrimitiveType::pointer, $1); }
 	 ;
 
 
@@ -219,27 +221,27 @@ factor: NUM_LIT						{ $$ = AST::MakeIntNode($1); }
 	  | LPAREN expr RPAREN			{ $$ = $2; }
 	  | functionCall				{ $$ = $1; }
 		| addrOfOp					{ $$ = $1; }
+		| derefOp						{ $$ = $1; }
 	  ;
 //!Mathematical expression --------------------------------------------------------------------
 
 
 // Variable declaration -----------------------------------------------------------------------
 varDecl: type ID					{ $$ = AST::MakeDeclNode($2, $1); }
-	   ;
+			 | type SYM_PTR ID	{ $$ = AST::MakeDeclNode($3, PrimitiveType::pointer, $1); }
+			 ;
 
 type: KWD_UI16						{ $$ = PrimitiveType::ui16; }
-	| KWD_I16						{ $$ = PrimitiveType::i16;	}
+		| KWD_I16							{ $$ = PrimitiveType::i16;	}
 
-	| KWD_UI32						{ $$ = PrimitiveType::ui32;	}
-	| KWD_I32						{ $$ = PrimitiveType::i32;	}
+		| KWD_UI32						{ $$ = PrimitiveType::ui32;	}
+		| KWD_I32							{ $$ = PrimitiveType::i32;	}
 
-	| KWD_UI64						{ $$ = PrimitiveType::ui64; }
-	| KWD_I64						{ $$ = PrimitiveType::i64;	}
+		| KWD_UI64						{ $$ = PrimitiveType::ui64; }
+		| KWD_I64							{ $$ = PrimitiveType::i64;	}
 
-	| KWD_NIHIL						{ $$ = PrimitiveType::nihil; }
-
-	| type SYM_PTR		{ $$ = PrimitiveType::pointer; }
-	;
+		| KWD_NIHIL						{ $$ = PrimitiveType::nihil; }
+		;
 //!Variable declaration -----------------------------------------------------------------------
 
 
@@ -273,6 +275,12 @@ arg: expr								{ $$ = $1; }
 addrOfOp:	ADDR_OF_OP ID { $$ = AST::MakeAddrOfNode($2); }
 				;
 //!Address of ---------------------------------------------------------------------------------
+
+
+// Dereference --------------------------------------------------------------------------------
+derefOp: SYM_PTR expr		{ $$ = AST::MakeDerefNode($2); }
+			 ;
+//!Dereference --------------------------------------------------------------------------------
 %%
 
 

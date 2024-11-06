@@ -16,6 +16,8 @@ struct SymTabEntry
 			ui32 size;
 			// Address is filled in codegen.cpp, and is defaulted to -1 in SymTable::EnterSymbol().
 			i32 adress;
+			// Typically PrimitiveType::invalid, but not for pointers.
+			PrimitiveType pointeeType;
 		} asVar;
 
 		struct
@@ -54,7 +56,7 @@ public:
 	std::wstring ComposeKey(const std::wstring& name);
 	std::wstring ComposeGlobalKey(const std::wstring& name);
 
-	SymTabEntry* EnterSymbol(const std::wstring& name, PrimitiveType type, ui32 size, const bool isFunction);
+	SymTabEntry* EnterSymbol(const std::wstring& name, const PrimitiveType type, const PrimitiveType pointeeType, ui32 size, const bool isFunction);
 
 	// The key here should be composed with ComposeKey already.
 	SymTabEntry* RetrieveSymbol(const std::wstring& composedKey);

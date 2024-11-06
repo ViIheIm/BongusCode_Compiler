@@ -591,6 +591,64 @@ namespace Body
 
 			break;
 		}
+		case Node_k::DerefNode:
+		{
+			AST::DerefNode* asDerefNode = (AST::DerefNode*)node;
+			const PrimitiveType pointerType = PrimitiveType::pointer;
+			
+			/*
+				Hunt through the subexpr until we find a pointer node.
+				Most sane dereference operations evolve from a single pointer, e.g.
+					¤(pointer + 1) = 200
+				and not typically
+					¤(pointer + **another pointer**) = 200
+
+				in fact(just checked this in compiler explorer), adding a pointer to another pointer in C++ raises an error,
+				so we can safely look for only 1 pointer in the subexpression, and take it's pointeeType.
+				
+				There's a safety check in the semantics pass which checks for more than 1 pointer in a subexpression,
+				which raises an error if several are found, so we can happily pick the first pointee type here and call it a day.
+			*/
+			PrimitiveType pointeeType = AST::IntNode::s_defaultIntLiteralType;
+			for (AST::Node* symNode : AST::GetAllChildNodesOfType(asDerefNode, Node_k::SymNode))
+			{
+				AST::SymNode* asSymNode = (AST::SymNode*)symNode;
+				SymTabEntry* entry = asSymNode->GetSymTabEntry();
+
+				if (entry->asVar.type == PrimitiveType::pointer)
+				{
+					// Find first pointer, get it's pointee-type and break.
+					pointeeType = entry->asVar.pointeeType;
+					break;
+				}
+			}
+
+			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+			GenOpNodeCode(code, asDerefNode->GetExpr(), t1, pointerType);
+
+			/*
+				mov     rax, QWORD PTR b$[rsp]
+				movzx   eax, WORD PTR[rax]
+			*/
+
+			std::string readReg(GetReg(RG::RAX, pointeeType));
+			std::string movToRaxOp("mov ");
+			std::string wordKind = GetWordKindFromType(pointeeType);
+			if (pointeeType == PrimitiveType::ui16 || pointeeType == PrimitiveType::i16)
+			{
+				movToRaxOp = "movzx ";
+				readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
+			}
+
+			// By this point, the entire expression should be generated and held in rax.
+			// Dereference rax and store it out in _t0.
+			std::string output = "\n; _t0 = Deref operation of previous expr(rax).\n" +
+				movToRaxOp + readReg + ", " + wordKind + "[RAX]\n";
+
+			code += output;
+
+			break;
+		}
 		}
 	}
 
@@ -609,7 +667,6 @@ namespace Body
 			case Node_k::SymNode:
 			{
 				AST::SymNode* asSymNode = (AST::SymNode*)n;
-				//SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asSymNode->GetName(), 1));
 				SymTabEntry* entry = asSymNode->GetSymTabEntry();
 				return entry->asVar.type;
 				break;
@@ -617,9 +674,13 @@ namespace Body
 			case Node_k::FunctionCallNode:
 			{
 				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)n;
-				//SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), 1));
 				SymTabEntry* entry = asFunctionCallNode->GetSymTabEntry();
 				return entry->asFunction.retType;
+				break;
+			}
+			case Node_k::AddrOfNode:
+			{
+				return PrimitiveType::pointer;
 				break;
 			}
 			default:
@@ -792,8 +853,6 @@ namespace Body
 
 				// Generate operation code. Remember that the temporaries stack section needs to be reset!
 				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
-				// TODO: The type supplied here from outside(s_defaultType/i32) will be too small to hold values gathered from ui64s/i64s.
-				// In the future, fix this by properly implementing functions, so we may stick it's return type here instead.
 				GenOpNodeCode(code, asReturnNode->GetRetExpr(), t0, retType);
 
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
@@ -805,8 +864,6 @@ namespace Body
 				// TODO: We're no longer generating the epilogue when we return. Instead, if we find a return statement(in an if-statement), stick the result in RAX and GOTO(!)
 				// the epilogue of the function, skipping all the other code in between.
 				// On the other hand, if we find a lone return statement that obscures code after it, we just raise an error.
-				// CurrentFunctionMetaData::temporariesStackSectionSize = *largestTempAllocation;
-				// Epilogue::GenerateFunctionEpilogue(code, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
 
 				break;
 			}

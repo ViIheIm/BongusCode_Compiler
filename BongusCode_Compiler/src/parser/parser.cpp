@@ -614,37 +614,37 @@ namespace yy {
           switch (yyn)
             {
   case 2: // program: globalEntries
-#line 121 "parser.y"
+#line 122 "parser.y"
                                                 { g_nodeHead = AST::MakeNullNode(); g_nodeHead->AdoptChildren((yystack_[0].value.ASTNode)); }
 #line 620 "parser.cpp"
     break;
 
   case 3: // globalEntries: globalEntries globalEntry
-#line 124 "parser.y"
+#line 125 "parser.y"
                                                 { (yystack_[1].value.ASTNode)->MakeSiblings((yystack_[0].value.ASTNode)); (yylhs.value.ASTNode) = (yystack_[1].value.ASTNode); }
 #line 626 "parser.cpp"
     break;
 
   case 4: // globalEntries: globalEntry
-#line 125 "parser.y"
+#line 126 "parser.y"
                            { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 632 "parser.cpp"
     break;
 
   case 5: // globalEntry: function
-#line 129 "parser.y"
+#line 130 "parser.y"
              { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 638 "parser.cpp"
     break;
 
   case 6: // globalEntry: fwdDecl
-#line 130 "parser.y"
+#line 131 "parser.y"
                      { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 644 "parser.cpp"
     break;
 
   case 7: // function: functionHead scope
-#line 133 "parser.y"
+#line 134 "parser.y"
                              {
 			(yylhs.value.ASTNode) = (yystack_[1].value.ASTNode);
 			(yystack_[1].value.ASTNode)->AdoptChildren((yystack_[0].value.ASTNode));
@@ -682,259 +682,277 @@ namespace yy {
     break;
 
   case 8: // functionHead: type ID LPAREN paramList RPAREN
-#line 168 "parser.y"
+#line 169 "parser.y"
                                                         { (yylhs.value.ASTNode) = AST::MakeFunctionNode((yystack_[4].value.primtype), (yystack_[3].value.str), (yystack_[1].value.ASTNode)); }
 #line 688 "parser.cpp"
     break;
 
   case 9: // paramList: paramList COMMA param
-#line 171 "parser.y"
+#line 172 "parser.y"
                                         { (yystack_[2].value.ASTNode)->MakeSiblings((yystack_[0].value.ASTNode)); (yylhs.value.ASTNode) = (yystack_[2].value.ASTNode); }
 #line 694 "parser.cpp"
     break;
 
   case 10: // paramList: param
-#line 172 "parser.y"
+#line 173 "parser.y"
                    { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 700 "parser.cpp"
     break;
 
   case 11: // paramList: KWD_NIHIL
-#line 173 "parser.y"
+#line 174 "parser.y"
                                                         { (yylhs.value.ASTNode) = nullptr; }
 #line 706 "parser.cpp"
     break;
 
   case 12: // param: type ID
-#line 176 "parser.y"
-                                                        { (yylhs.value.ASTNode) = AST::MakeArgNode((yystack_[1].value.primtype), (yystack_[0].value.str)); }
+#line 177 "parser.y"
+                                                        { (yylhs.value.ASTNode) = AST::MakeArgNode((yystack_[0].value.str), (yystack_[1].value.primtype)); }
 #line 712 "parser.cpp"
     break;
 
-  case 13: // fwdDecl: type ID LPAREN paramList RPAREN SEMI
-#line 180 "parser.y"
-                                                        { (yylhs.value.ASTNode) = AST::MakeFwdDeclNode((yystack_[5].value.primtype), (yystack_[4].value.str), (yystack_[2].value.ASTNode)); }
+  case 13: // param: type SYM_PTR ID
+#line 178 "parser.y"
+                                                { (yylhs.value.ASTNode) = AST::MakeArgNode((yystack_[0].value.str), PrimitiveType::pointer, (yystack_[2].value.primtype)); }
 #line 718 "parser.cpp"
     break;
 
-  case 14: // scope: LCURLY stmts RCURLY
-#line 189 "parser.y"
-                                                { (yylhs.value.ASTNode) = AST::MakeScopeNode(); (yylhs.value.ASTNode)->AdoptChildren((yystack_[1].value.ASTNode)); }
+  case 14: // fwdDecl: type ID LPAREN paramList RPAREN SEMI
+#line 182 "parser.y"
+                                                        { (yylhs.value.ASTNode) = AST::MakeFwdDeclNode((yystack_[5].value.primtype), (yystack_[4].value.str), (yystack_[2].value.ASTNode)); }
 #line 724 "parser.cpp"
     break;
 
-  case 15: // stmts: stmts stmt SEMI
-#line 192 "parser.y"
-                                                { (yylhs.value.ASTNode) = (yystack_[2].value.ASTNode)->MakeSiblings((yystack_[1].value.ASTNode)); }
+  case 15: // scope: LCURLY stmts RCURLY
+#line 191 "parser.y"
+                                                { (yylhs.value.ASTNode) = AST::MakeScopeNode(); (yylhs.value.ASTNode)->AdoptChildren((yystack_[1].value.ASTNode)); }
 #line 730 "parser.cpp"
     break;
 
-  case 16: // stmts: stmt SEMI
-#line 193 "parser.y"
-                                                        { (yylhs.value.ASTNode) = (yystack_[1].value.ASTNode); }
+  case 16: // stmts: stmts stmt SEMI
+#line 194 "parser.y"
+                                                { (yylhs.value.ASTNode) = (yystack_[2].value.ASTNode)->MakeSiblings((yystack_[1].value.ASTNode)); }
 #line 736 "parser.cpp"
     break;
 
-  case 17: // stmt: expr
-#line 196 "parser.y"
-                                                                { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
+  case 17: // stmts: stmt SEMI
+#line 195 "parser.y"
+                                                        { (yylhs.value.ASTNode) = (yystack_[1].value.ASTNode); }
 #line 742 "parser.cpp"
     break;
 
-  case 18: // stmt: varDecl
-#line 197 "parser.y"
+  case 18: // stmt: expr
+#line 198 "parser.y"
                                                                 { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 748 "parser.cpp"
     break;
 
-  case 19: // stmt: varAss
-#line 198 "parser.y"
+  case 19: // stmt: varDecl
+#line 199 "parser.y"
                                                                 { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 754 "parser.cpp"
     break;
 
-  case 20: // stmt: returnOp
-#line 199 "parser.y"
+  case 20: // stmt: varAss
+#line 200 "parser.y"
                                                                 { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 760 "parser.cpp"
     break;
 
-  case 21: // expr: addExpr
-#line 204 "parser.y"
-                                                        { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
+  case 21: // stmt: returnOp
+#line 201 "parser.y"
+                                                                { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 766 "parser.cpp"
     break;
 
-  case 22: // addExpr: addExpr PLUS_OP mulExpr
-#line 207 "parser.y"
-                                        { (yylhs.value.ASTNode) = AST::MakeOpNode(L'+', (yystack_[2].value.ASTNode), (yystack_[0].value.ASTNode)); }
+  case 22: // expr: addExpr
+#line 206 "parser.y"
+                                                        { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 772 "parser.cpp"
     break;
 
-  case 23: // addExpr: addExpr MINUS_OP mulExpr
-#line 208 "parser.y"
-                                        { (yylhs.value.ASTNode) = AST::MakeOpNode(L'-', (yystack_[2].value.ASTNode), (yystack_[0].value.ASTNode)); }
+  case 23: // addExpr: addExpr PLUS_OP mulExpr
+#line 209 "parser.y"
+                                        { (yylhs.value.ASTNode) = AST::MakeOpNode(L'+', (yystack_[2].value.ASTNode), (yystack_[0].value.ASTNode)); }
 #line 778 "parser.cpp"
     break;
 
-  case 24: // addExpr: mulExpr
-#line 209 "parser.y"
-             { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
+  case 24: // addExpr: addExpr MINUS_OP mulExpr
+#line 210 "parser.y"
+                                        { (yylhs.value.ASTNode) = AST::MakeOpNode(L'-', (yystack_[2].value.ASTNode), (yystack_[0].value.ASTNode)); }
 #line 784 "parser.cpp"
     break;
 
-  case 25: // mulExpr: mulExpr MUL_OP factor
-#line 212 "parser.y"
-                                        { (yylhs.value.ASTNode) = AST::MakeOpNode(L'*', (yystack_[2].value.ASTNode), (yystack_[0].value.ASTNode)); }
+  case 25: // addExpr: mulExpr
+#line 211 "parser.y"
+             { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 790 "parser.cpp"
     break;
 
-  case 26: // mulExpr: mulExpr DIV_OP factor
-#line 213 "parser.y"
-                                                { (yylhs.value.ASTNode) = AST::MakeOpNode(L'/', (yystack_[2].value.ASTNode), (yystack_[0].value.ASTNode)); }
+  case 26: // mulExpr: mulExpr MUL_OP factor
+#line 214 "parser.y"
+                                        { (yylhs.value.ASTNode) = AST::MakeOpNode(L'*', (yystack_[2].value.ASTNode), (yystack_[0].value.ASTNode)); }
 #line 796 "parser.cpp"
     break;
 
-  case 27: // mulExpr: factor
-#line 214 "parser.y"
-             { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
+  case 27: // mulExpr: mulExpr DIV_OP factor
+#line 215 "parser.y"
+                                                { (yylhs.value.ASTNode) = AST::MakeOpNode(L'/', (yystack_[2].value.ASTNode), (yystack_[0].value.ASTNode)); }
 #line 802 "parser.cpp"
     break;
 
-  case 28: // factor: NUM_LIT
-#line 217 "parser.y"
-                                                        { (yylhs.value.ASTNode) = AST::MakeIntNode((yystack_[0].value.num)); }
+  case 28: // mulExpr: factor
+#line 216 "parser.y"
+             { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 808 "parser.cpp"
     break;
 
-  case 29: // factor: ID
-#line 218 "parser.y"
-                                                                { (yylhs.value.ASTNode) = AST::MakeSymNode((yystack_[0].value.str)); }
+  case 29: // factor: NUM_LIT
+#line 219 "parser.y"
+                                                        { (yylhs.value.ASTNode) = AST::MakeIntNode((yystack_[0].value.num)); }
 #line 814 "parser.cpp"
     break;
 
-  case 30: // factor: LPAREN expr RPAREN
-#line 219 "parser.y"
-                                                { (yylhs.value.ASTNode) = (yystack_[1].value.ASTNode); }
+  case 30: // factor: ID
+#line 220 "parser.y"
+                                                                { (yylhs.value.ASTNode) = AST::MakeSymNode((yystack_[0].value.str)); }
 #line 820 "parser.cpp"
     break;
 
-  case 31: // factor: functionCall
-#line 220 "parser.y"
-                                                        { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
+  case 31: // factor: LPAREN expr RPAREN
+#line 221 "parser.y"
+                                                { (yylhs.value.ASTNode) = (yystack_[1].value.ASTNode); }
 #line 826 "parser.cpp"
     break;
 
-  case 32: // factor: addrOfOp
-#line 221 "parser.y"
-                                                                { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
+  case 32: // factor: functionCall
+#line 222 "parser.y"
+                                                        { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 832 "parser.cpp"
     break;
 
-  case 33: // varDecl: type ID
-#line 227 "parser.y"
-                                                        { (yylhs.value.ASTNode) = AST::MakeDeclNode((yystack_[0].value.str), (yystack_[1].value.primtype)); }
+  case 33: // factor: addrOfOp
+#line 223 "parser.y"
+                                                                { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 838 "parser.cpp"
     break;
 
-  case 34: // type: KWD_UI16
-#line 230 "parser.y"
-                                                        { (yylhs.value.primtype) = PrimitiveType::ui16; }
+  case 34: // factor: derefOp
+#line 224 "parser.y"
+                                                                        { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 844 "parser.cpp"
     break;
 
-  case 35: // type: KWD_I16
-#line 231 "parser.y"
-                                                                { (yylhs.value.primtype) = PrimitiveType::i16;	}
+  case 35: // varDecl: type ID
+#line 230 "parser.y"
+                                                        { (yylhs.value.ASTNode) = AST::MakeDeclNode((yystack_[0].value.str), (yystack_[1].value.primtype)); }
 #line 850 "parser.cpp"
     break;
 
-  case 36: // type: KWD_UI32
-#line 233 "parser.y"
-                                                                { (yylhs.value.primtype) = PrimitiveType::ui32;	}
+  case 36: // varDecl: type SYM_PTR ID
+#line 231 "parser.y"
+                                                { (yylhs.value.ASTNode) = AST::MakeDeclNode((yystack_[0].value.str), PrimitiveType::pointer, (yystack_[2].value.primtype)); }
 #line 856 "parser.cpp"
     break;
 
-  case 37: // type: KWD_I32
+  case 37: // type: KWD_UI16
 #line 234 "parser.y"
-                                                                { (yylhs.value.primtype) = PrimitiveType::i32;	}
+                                                        { (yylhs.value.primtype) = PrimitiveType::ui16; }
 #line 862 "parser.cpp"
     break;
 
-  case 38: // type: KWD_UI64
-#line 236 "parser.y"
-                                                                { (yylhs.value.primtype) = PrimitiveType::ui64; }
+  case 38: // type: KWD_I16
+#line 235 "parser.y"
+                                                                                { (yylhs.value.primtype) = PrimitiveType::i16;	}
 #line 868 "parser.cpp"
     break;
 
-  case 39: // type: KWD_I64
+  case 39: // type: KWD_UI32
 #line 237 "parser.y"
-                                                                { (yylhs.value.primtype) = PrimitiveType::i64;	}
+                                                                        { (yylhs.value.primtype) = PrimitiveType::ui32;	}
 #line 874 "parser.cpp"
     break;
 
-  case 40: // type: KWD_NIHIL
-#line 239 "parser.y"
-                                                                { (yylhs.value.primtype) = PrimitiveType::nihil; }
+  case 40: // type: KWD_I32
+#line 238 "parser.y"
+                                                                                { (yylhs.value.primtype) = PrimitiveType::i32;	}
 #line 880 "parser.cpp"
     break;
 
-  case 41: // type: type SYM_PTR
-#line 241 "parser.y"
-                                { (yylhs.value.primtype) = PrimitiveType::pointer; }
+  case 41: // type: KWD_UI64
+#line 240 "parser.y"
+                                                                        { (yylhs.value.primtype) = PrimitiveType::ui64; }
 #line 886 "parser.cpp"
     break;
 
-  case 42: // varAss: ID EQ_OP expr
-#line 247 "parser.y"
-                                                { (yylhs.value.ASTNode) = AST::MakeAssNode(AST::MakeSymNode((yystack_[2].value.str)) /* <--- Hurr durr */, (yystack_[0].value.ASTNode)); }
+  case 42: // type: KWD_I64
+#line 241 "parser.y"
+                                                                                { (yylhs.value.primtype) = PrimitiveType::i64;	}
 #line 892 "parser.cpp"
     break;
 
-  case 43: // returnOp: KWD_RETURN expr
-#line 253 "parser.y"
-                                                { (yylhs.value.ASTNode) = AST::MakeReturnNode((yystack_[0].value.ASTNode)); }
+  case 43: // type: KWD_NIHIL
+#line 243 "parser.y"
+                                                                        { (yylhs.value.primtype) = PrimitiveType::nihil; }
 #line 898 "parser.cpp"
     break;
 
-  case 44: // functionCall: ID LPAREN argsList RPAREN
-#line 259 "parser.y"
-                                        { (yylhs.value.ASTNode) = AST::MakeFunctionCallNode((yystack_[3].value.str), (yystack_[1].value.ASTNode)); }
+  case 44: // varAss: ID EQ_OP expr
+#line 249 "parser.y"
+                                                { (yylhs.value.ASTNode) = AST::MakeAssNode(AST::MakeSymNode((yystack_[2].value.str)) /* <--- Hurr durr */, (yystack_[0].value.ASTNode)); }
 #line 904 "parser.cpp"
     break;
 
-  case 45: // argsList: argsList COMMA arg
-#line 262 "parser.y"
-                                                { (yystack_[2].value.ASTNode)->MakeSiblings((yystack_[0].value.ASTNode)); (yylhs.value.ASTNode) = (yystack_[2].value.ASTNode); }
+  case 45: // returnOp: KWD_RETURN expr
+#line 255 "parser.y"
+                                                { (yylhs.value.ASTNode) = AST::MakeReturnNode((yystack_[0].value.ASTNode)); }
 #line 910 "parser.cpp"
     break;
 
-  case 46: // argsList: arg
-#line 263 "parser.y"
-                                                                        { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
+  case 46: // functionCall: ID LPAREN argsList RPAREN
+#line 261 "parser.y"
+                                        { (yylhs.value.ASTNode) = AST::MakeFunctionCallNode((yystack_[3].value.str), (yystack_[1].value.ASTNode)); }
 #line 916 "parser.cpp"
     break;
 
-  case 47: // argsList: %empty
+  case 47: // argsList: argsList COMMA arg
 #line 264 "parser.y"
-                                                                        { (yylhs.value.ASTNode) = nullptr; }
+                                                { (yystack_[2].value.ASTNode)->MakeSiblings((yystack_[0].value.ASTNode)); (yylhs.value.ASTNode) = (yystack_[2].value.ASTNode); }
 #line 922 "parser.cpp"
     break;
 
-  case 48: // arg: expr
-#line 267 "parser.y"
+  case 48: // argsList: arg
+#line 265 "parser.y"
                                                                         { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
 #line 928 "parser.cpp"
     break;
 
-  case 49: // addrOfOp: ADDR_OF_OP ID
-#line 273 "parser.y"
-                              { (yylhs.value.ASTNode) = AST::MakeAddrOfNode((yystack_[0].value.str)); }
+  case 49: // argsList: %empty
+#line 266 "parser.y"
+                                                                        { (yylhs.value.ASTNode) = nullptr; }
 #line 934 "parser.cpp"
     break;
 
+  case 50: // arg: expr
+#line 269 "parser.y"
+                                                                        { (yylhs.value.ASTNode) = (yystack_[0].value.ASTNode); }
+#line 940 "parser.cpp"
+    break;
 
-#line 938 "parser.cpp"
+  case 51: // addrOfOp: ADDR_OF_OP ID
+#line 275 "parser.y"
+                              { (yylhs.value.ASTNode) = AST::MakeAddrOfNode((yystack_[0].value.str)); }
+#line 946 "parser.cpp"
+    break;
+
+  case 52: // derefOp: SYM_PTR expr
+#line 281 "parser.y"
+                                { (yylhs.value.ASTNode) = AST::MakeDerefNode((yystack_[0].value.ASTNode)); }
+#line 952 "parser.cpp"
+    break;
+
+
+#line 956 "parser.cpp"
 
             default:
               break;
@@ -1123,78 +1141,82 @@ namespace yy {
 
 
 
-  const signed char parser::yypact_ninf_ = -23;
+  const signed char parser::yypact_ninf_ = -21;
 
-  const signed char parser::yytable_ninf_ = -41;
+  const signed char parser::yytable_ninf_ = -44;
 
   const signed char
   parser::yypact_[] =
   {
-      47,   -23,   -23,   -23,   -23,   -23,   -23,   -23,     7,    47,
-     -23,   -23,    11,   -23,    39,   -23,   -23,    26,   -23,    42,
-     -23,   -13,   -23,    23,    23,    45,     1,    49,   -23,    15,
-      35,   -23,   -23,    40,   -23,   -23,   -23,   -23,    57,    23,
-      23,    58,   -23,    59,   -23,   -23,    55,   -23,    23,    23,
-      23,    23,   -23,    69,    -3,   -23,    70,   -23,   -23,    -2,
-     -23,   -23,   -23,    35,    35,   -23,   -23,    60,    47,   -23,
-     -23,    23,   -23,   -23,   -23
+      59,   -21,   -21,   -21,   -21,   -21,   -21,   -21,     1,    59,
+     -21,   -21,   -13,   -21,    15,   -21,   -21,    27,   -21,     6,
+       3,   -21,    40,    40,    40,    49,     2,    50,   -21,    17,
+      39,   -21,   -21,    22,   -21,   -21,   -21,   -21,   -21,    69,
+      40,    40,    55,   -21,   -21,    62,   -21,   -21,    52,   -21,
+      40,    40,    40,    40,   -21,    82,    47,    23,   -21,    54,
+     -21,   -21,    25,   -21,   -21,   -21,    39,    39,   -21,   -21,
+     -21,    61,    59,   -21,    84,   -21,    40,   -21,   -21,   -21,
+     -21
   };
 
   const signed char
   parser::yydefact_[] =
   {
-       0,    40,    34,    35,    36,    37,    38,    39,     0,     2,
+       0,    43,    37,    38,    39,    40,    41,    42,     0,     2,
        4,     5,     0,     6,     0,     1,     3,     0,     7,     0,
-      41,    29,    28,     0,     0,     0,     0,     0,    17,    21,
-      24,    27,    18,     0,    19,    20,    31,    32,     0,     0,
-      47,    29,    43,     0,    49,    14,     0,    16,     0,     0,
-       0,     0,    33,    11,     0,    10,     0,    42,    48,     0,
-      46,    30,    15,    22,    23,    25,    26,     8,     0,    12,
-      44,     0,    13,     9,    45
+      30,    29,     0,     0,     0,     0,     0,     0,    18,    22,
+      25,    28,    19,     0,    20,    21,    32,    33,    34,     0,
+       0,    49,    30,    52,    45,     0,    51,    15,     0,    17,
+       0,     0,     0,     0,    35,     0,    11,     0,    10,     0,
+      44,    50,     0,    48,    31,    16,    23,    24,    26,    27,
+      36,     8,     0,    12,     0,    46,     0,    14,     9,    13,
+      47
   };
 
   const signed char
   parser::yypgoto_[] =
   {
-     -23,   -23,   -23,    73,   -23,   -23,   -23,    18,   -23,   -23,
-     -23,    61,   -22,   -23,    16,    27,   -23,   -17,   -23,   -23,
-     -23,   -23,    12,   -23
+     -21,   -21,   -21,    79,   -21,   -21,   -21,    18,   -21,   -21,
+     -21,    63,   -20,   -21,    12,    13,   -21,   -17,   -21,   -21,
+     -21,   -21,    16,   -21,   -21
   };
 
   const signed char
   parser::yydefgoto_[] =
   {
-      -1,     8,     9,    10,    11,    12,    54,    55,    13,    18,
+      -1,     8,     9,    10,    11,    12,    57,    58,    13,    18,
       26,    27,    28,    29,    30,    31,    32,    14,    34,    35,
-      36,    59,    60,    37
+      36,    62,    63,    37,    38
   };
 
   const signed char
   parser::yytable_[] =
   {
-      33,    42,    43,    39,    21,    22,     1,    15,    40,    33,
-       2,     3,     4,     5,     6,     7,    23,    57,    58,    67,
-      70,    56,    24,    68,    71,    45,    41,    22,    25,    21,
-      22,     1,    48,    49,    17,     2,     3,     4,     5,     6,
-       7,    23,    19,    52,    24,    20,    20,    24,    44,    58,
-      25,    56,     1,    25,    50,    51,     2,     3,     4,     5,
-       6,     7,    53,    38,    63,    64,     2,     3,     4,     5,
-       6,     7,   -40,    69,    47,   -40,    20,    65,    66,    40,
-      62,    61,    16,    74,     0,    72,    73,    46
+      33,    15,    43,    44,    45,    20,    21,     1,    22,    33,
+      17,     2,     3,     4,     5,     6,     7,    23,    19,    40,
+      60,    61,    59,    24,    41,    54,    47,    39,    55,    25,
+      20,    21,     1,    22,    50,    51,     2,     3,     4,     5,
+       6,     7,    23,    42,    21,    71,    22,    75,    24,    72,
+     -43,    76,    46,   -43,    25,    59,    61,    73,    52,    53,
+      74,    24,    66,    67,     1,    68,    69,    25,     2,     3,
+       4,     5,     6,     7,    56,    49,    41,    65,     2,     3,
+       4,     5,     6,     7,    64,    70,    77,    79,    16,    48,
+      78,     0,    80
   };
 
   const signed char
   parser::yycheck_[] =
   {
-      17,    23,    24,    16,     3,     4,     5,     0,    21,    26,
-       9,    10,    11,    12,    13,    14,    15,    39,    40,    22,
-      22,    38,    21,    26,    26,    24,     3,     4,    27,     3,
-       4,     5,    17,    18,    23,     9,    10,    11,    12,    13,
-      14,    15,     3,     3,    21,     6,     6,    21,     3,    71,
-      27,    68,     5,    27,    19,    20,     9,    10,    11,    12,
-      13,    14,     5,    21,    48,    49,     9,    10,    11,    12,
-      13,    14,     3,     3,    25,     6,     6,    50,    51,    21,
-      25,    22,     9,    71,    -1,    25,    68,    26
+      17,     0,    22,    23,    24,     3,     4,     5,     6,    26,
+      23,     9,    10,    11,    12,    13,    14,    15,     3,    16,
+      40,    41,    39,    21,    21,     3,    24,    21,     6,    27,
+       3,     4,     5,     6,    17,    18,     9,    10,    11,    12,
+      13,    14,    15,     3,     4,    22,     6,    22,    21,    26,
+       3,    26,     3,     6,    27,    72,    76,     3,    19,    20,
+       6,    21,    50,    51,     5,    52,    53,    27,     9,    10,
+      11,    12,    13,    14,     5,    25,    21,    25,     9,    10,
+      11,    12,    13,    14,    22,     3,    25,     3,     9,    26,
+      72,    -1,    76
   };
 
   const signed char
@@ -1202,32 +1224,35 @@ namespace yy {
   {
        0,     5,     9,    10,    11,    12,    13,    14,    29,    30,
       31,    32,    33,    36,    45,     0,    31,    23,    37,     3,
-       6,     3,     4,    15,    21,    27,    38,    39,    40,    41,
-      42,    43,    44,    45,    46,    47,    48,    51,    21,    16,
-      21,     3,    40,    40,     3,    24,    39,    25,    17,    18,
-      19,    20,     3,     5,    34,    35,    45,    40,    40,    49,
-      50,    22,    25,    42,    42,    43,    43,    22,    26,     3,
-      22,    26,    25,    35,    50
+       3,     4,     6,    15,    21,    27,    38,    39,    40,    41,
+      42,    43,    44,    45,    46,    47,    48,    51,    52,    21,
+      16,    21,     3,    40,    40,    40,     3,    24,    39,    25,
+      17,    18,    19,    20,     3,     6,     5,    34,    35,    45,
+      40,    40,    49,    50,    22,    25,    42,    42,    43,    43,
+       3,    22,    26,     3,     6,    22,    26,    25,    35,     3,
+      50
   };
 
   const signed char
   parser::yyr1_[] =
   {
        0,    28,    29,    30,    30,    31,    31,    32,    33,    34,
-      34,    34,    35,    36,    37,    38,    38,    39,    39,    39,
-      39,    40,    41,    41,    41,    42,    42,    42,    43,    43,
-      43,    43,    43,    44,    45,    45,    45,    45,    45,    45,
-      45,    45,    46,    47,    48,    49,    49,    49,    50,    51
+      34,    34,    35,    35,    36,    37,    38,    38,    39,    39,
+      39,    39,    40,    41,    41,    41,    42,    42,    42,    43,
+      43,    43,    43,    43,    43,    44,    44,    45,    45,    45,
+      45,    45,    45,    45,    46,    47,    48,    49,    49,    49,
+      50,    51,    52
   };
 
   const signed char
   parser::yyr2_[] =
   {
        0,     2,     1,     2,     1,     1,     1,     2,     5,     3,
-       1,     1,     2,     6,     3,     3,     2,     1,     1,     1,
-       1,     1,     3,     3,     1,     3,     3,     1,     1,     1,
-       3,     1,     1,     2,     1,     1,     1,     1,     1,     1,
-       1,     2,     3,     2,     4,     3,     1,     0,     1,     2
+       1,     1,     2,     3,     6,     3,     3,     2,     1,     1,
+       1,     1,     1,     3,     3,     1,     3,     3,     1,     1,
+       1,     3,     1,     1,     1,     2,     3,     1,     1,     1,
+       1,     1,     1,     1,     3,     2,     4,     3,     1,     0,
+       1,     2,     2
   };
 
 
@@ -1245,7 +1270,7 @@ namespace yy {
   "globalEntries", "globalEntry", "function", "functionHead", "paramList",
   "param", "fwdDecl", "scope", "stmts", "stmt", "expr", "addExpr",
   "mulExpr", "factor", "varDecl", "type", "varAss", "returnOp",
-  "functionCall", "argsList", "arg", "addrOfOp", YY_NULLPTR
+  "functionCall", "argsList", "arg", "addrOfOp", "derefOp", YY_NULLPTR
   };
 #endif
 
@@ -1254,11 +1279,12 @@ namespace yy {
   const short
   parser::yyrline_[] =
   {
-       0,   121,   121,   124,   125,   129,   130,   133,   168,   171,
-     172,   173,   176,   180,   189,   192,   193,   196,   197,   198,
-     199,   204,   207,   208,   209,   212,   213,   214,   217,   218,
-     219,   220,   221,   227,   230,   231,   233,   234,   236,   237,
-     239,   241,   247,   253,   259,   262,   263,   264,   267,   273
+       0,   122,   122,   125,   126,   130,   131,   134,   169,   172,
+     173,   174,   177,   178,   182,   191,   194,   195,   198,   199,
+     200,   201,   206,   209,   210,   211,   214,   215,   216,   219,
+     220,   221,   222,   223,   224,   230,   231,   234,   235,   237,
+     238,   240,   241,   243,   249,   255,   261,   264,   265,   266,
+     269,   275,   281
   };
 
   void
@@ -1339,9 +1365,9 @@ namespace yy {
   }
 
 } // yy
-#line 1343 "parser.cpp"
+#line 1369 "parser.cpp"
 
-#line 276 "parser.y"
+#line 284 "parser.y"
 
 
 
