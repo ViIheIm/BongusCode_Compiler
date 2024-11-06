@@ -55,12 +55,13 @@ AST::Node* AST::MakeScopeNode()
     return node;
 }
 
-AST::Node* AST::MakeDeclNode(std::wstring* s, PrimitiveType type)
+AST::Node* AST::MakeDeclNode(std::wstring* s, const PrimitiveType type, const PrimitiveType pointeeType)
 {
     DeclNode* node = new DeclNode();
     assert(node && "Failed to allocate decl node");
     node->c = *s;
     node->t = type;
+    node->pointeeType = pointeeType;
     node->kind = Node_k::DeclNode;
     node->entry = nullptr;
     
@@ -146,12 +147,13 @@ AST::Node* AST::MakeFunctionNode(PrimitiveType retType, std::wstring* s, Node* a
     return node;
 }
 
-AST::Node* AST::MakeArgNode(PrimitiveType type, std::wstring* s)
+AST::Node* AST::MakeArgNode(std::wstring* s, const PrimitiveType type, const PrimitiveType pointeeType)
 {
     ArgNode* node = new ArgNode();
     assert(node && "Failed to allocate arg node");
     node->c = *s;
     node->kind = Node_k::ArgNode;
+    node->pointeeType = pointeeType;
     node->type = type;
     node->entry = nullptr;
 
@@ -208,6 +210,17 @@ AST::Node* AST::MakeAddrOfNode(std::wstring* name)
   return node;
 }
 
+AST::Node* AST::MakeDerefNode(Node* expression)
+{
+  DerefNode* node = new DerefNode();
+  assert(node && "Failed to allocate deref node");
+  node->kind = Node_k::DerefNode;
+  node->expr = expression;
+
+
+  return node;
+}
+
 AST::Node* AST::MakeNullNode()
 {
     Node* node = new Node();
@@ -230,4 +243,37 @@ void AST::DoForAllChildren(Node* parent, void(*callback)(Node*, void*), void* ar
             callback(n, args);
         }
     }
+}
+
+std::vector<AST::Node*> AST::GetAllChildrenRecursively(Node* parent)
+{
+  // Frail recursion simulation again.
+  std::vector<Node*> allChildren{ parent };
+
+  for (i32 i = 0; i < allChildren.size(); i++)
+  {
+    for (Node* n : allChildren[i]->GetChildren())
+    {
+      allChildren.push_back(n);
+    }
+  }
+
+  return allChildren;
+}
+
+std::vector<AST::Node*> AST::GetAllChildNodesOfType(Node* parent, const Node_k kind)
+{
+  std::vector<Node*> allChildren = GetAllChildrenRecursively(parent);
+
+  std::vector<Node*> childrenOfKind;
+
+  for (Node* n : allChildren)
+  {
+    if (n->kind == kind)
+    {
+      childrenOfKind.push_back(n);
+    }
+  }
+
+  return childrenOfKind;
 }

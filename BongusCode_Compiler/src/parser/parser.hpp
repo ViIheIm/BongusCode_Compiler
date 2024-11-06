@@ -339,7 +339,8 @@ namespace yy {
         S_functionCall = 48,                     // functionCall
         S_argsList = 49,                         // argsList
         S_arg = 50,                              // arg
-        S_addrOfOp = 51                          // addrOfOp
+        S_addrOfOp = 51,                         // addrOfOp
+        S_derefOp = 52                           // derefOp
       };
     };
 
@@ -827,8 +828,8 @@ namespace yy {
     /// Constants.
     enum
     {
-      yylast_ = 87,     ///< Last index in yytable_.
-      yynnts_ = 24,  ///< Number of nonterminal symbols.
+      yylast_ = 92,     ///< Last index in yytable_.
+      yynnts_ = 25,  ///< Number of nonterminal symbols.
       yyfinal_ = 15 ///< Termination state number.
     };
 
@@ -840,7 +841,7 @@ namespace yy {
 
 
 } // yy
-#line 844 "parser.hpp"
+#line 845 "parser.hpp"
 
 
 

@@ -7,25 +7,6 @@
 
 class NodeVisitor;
 
-// Node kind.
-enum class Node_k : ui16
-{
-	Node,
-	IntNode,
-	SymNode,
-	OpNode,
-	AssNode,
-	ScopeNode,
-	DeclNode,
-	ReturnNode,
-	FunctionNode,
-	ArgNode,
-	FunctionCallNode,
-	FwdDeclNode,
-	AddrOfNode
-};
-
-
 namespace AST
 {
 	// A disaster handle which all nodes register themselves at.
@@ -58,6 +39,7 @@ namespace AST
 
 		friend Node* MakeNullNode();
 		friend void DoForAllChildren(Node*, void(*)(Node*, void*), void*);
+		friend std::vector<Node*> GetAllChildNodesOfType(Node*, const Node_k);
 
 	protected:
 	
@@ -197,13 +179,15 @@ namespace AST
 		virtual ~DeclNode() override = default;
 		inline const std::wstring& GetName(void) const { return c; }
 		inline const PrimitiveType GetType(void) const { return t; }
+		inline const PrimitiveType GetPointeeType(void) const { return pointeeType; }
 		inline const i16 GetSize(void) const { return size; }
-		friend Node* MakeDeclNode(std::wstring*, PrimitiveType);
+		friend Node* MakeDeclNode(std::wstring*, const PrimitiveType, const PrimitiveType);
 
 	private:
 
 		std::wstring c;
 		PrimitiveType t;
+		PrimitiveType pointeeType;
 		i16 size;
 	};
 
@@ -255,12 +239,13 @@ namespace AST
 		virtual ~ArgNode() override = default;
 		inline const std::wstring& GetName(void) const { return c; }
 		inline const PrimitiveType GetType(void) const { return type; }
-		friend Node* MakeArgNode(PrimitiveType, std::wstring*);
+		friend Node* MakeArgNode(std::wstring*, const PrimitiveType, const PrimitiveType);
 
 	private:
 
 		std::wstring c;
 		PrimitiveType type;
+		PrimitiveType pointeeType;
 	};
 
 	// Represents the result of calling a function.
@@ -309,5 +294,19 @@ namespace AST
 
 	private:
 		std::wstring name;
+	};
+
+	class DerefNode : public Node
+	{
+	public:
+		DerefNode() = default;
+		virtual ~DerefNode() override = default;
+		virtual std::vector<Node*> GetChildren(void) override;
+
+		inline Node* GetExpr(void) const { return expr; }
+		friend Node* MakeDerefNode(Node*);
+
+	private:
+		Node* expr;
 	};
 }
