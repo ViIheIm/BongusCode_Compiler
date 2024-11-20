@@ -309,4 +309,34 @@ namespace AST
 	private:
 		Node* expr;
 	};
+
+	class ForLoopNode : public Node
+	{
+	public:
+		ForLoopNode() = default;
+		virtual ~ForLoopNode() override = default;
+		virtual std::vector<Node*> GetChildren(void) override;
+		inline Node* GetHead(void) const { return head; }
+		inline Node* GetBody(void) const { return body; }
+		friend Node* MakeForLoopNode(Node*, Node*);
+
+	private:
+		Node* head;
+		Node* body;
+	};
+
+	class ForLoopHeadNode : public Node
+	{
+	public:
+		ForLoopHeadNode() = default;
+		virtual ~ForLoopHeadNode() override = default;
+		virtual std::vector<Node*> GetChildren(void) override;
+		inline Node* GetUpperBound(void) const { return upperBound; }
+		inline Node* GetLowerBound(void) const { return lowerBound; }
+		friend Node* MakeForLoopHeadNode(Node*, Node*);
+
+	private:
+		Node* upperBound;
+		Node* lowerBound;
+	};
 }

@@ -58,6 +58,12 @@ namespace AST
 	// makeDerefNode(expression) instantiates a node for a dereference operation on expression.
 	Node* MakeDerefNode(Node* expression);
 
+	// makeForLoopNode(head, body) instantiates a node for a complete for loop node given a head and a body.
+	Node* MakeForLoopNode(Node* head, Node* body);
+
+	// makeForLoopHeadNode() instantiates a node for a for loop head given a node for an upper and lower bound expression respectively.
+	Node* MakeForLoopHeadNode(Node* upperBound, Node* lowerBound);
+
 	// makeNullNode() instantiates a null node that explicitly represents the
 	// absence of structure.For consistency in processing an AST, it is better to
 	// have a null node than to have gaps in the AST or null pointers.
