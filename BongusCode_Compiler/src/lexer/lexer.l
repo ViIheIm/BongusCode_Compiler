@@ -35,6 +35,7 @@ KWD_UI64		"ui64"
 KWD_I64			"i64"
 
 KWD_RETURN		"Claudere"
+KWD_FOR				"For"
 
 ID				[[:alpha:]_][[:alnum:]_]*
 NUM_LIT			0|[1-9][0-9]*
@@ -52,6 +53,7 @@ LCURLY			\{
 RCURLY			\}
 
 SEMI			\.
+RANGE_SYMBOL	⇢
 COMMA			\,
 
 ADDR_OF_OP	&
@@ -104,6 +106,10 @@ ADDR_OF_OP	&
 {KWD_RETURN}
 	LEXLOG(L"Found KWD_RETURN: %s\n", wstr().c_str());
 	return BTok::KWD_RETURN;
+
+{KWD_FOR}
+	LEXLOG(L"Found KWD_FOR: %s\n", wstr().c_str());
+	return BTok::KWD_FOR;
 
 {ID}
 	LEXLOG(L"Found ID: %s\n", wstr().c_str());
@@ -162,6 +168,10 @@ ADDR_OF_OP	&
 {SEMI}
 	LEXLOG(L"Found SEMI: %s\n", wstr().c_str());
 	return BTok::SEMI;
+
+{RANGE_SYMBOL}
+	LEXLOG(L"Found RANGE_SYMBOL: %s\n", wstr().c_str());
+	return BTok::RANGE_SYMBOL;
 
 {COMMA}
 	LEXLOG(L"Found COMMA: %s\n", wstr().c_str());

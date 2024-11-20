@@ -64,6 +64,7 @@
 %token KWD_I64
 
 %token KWD_RETURN
+%token KWD_FOR
 
 %token EQ_OP
 %token PLUS_OP
@@ -78,6 +79,7 @@
 %token RCURLY
 
 %token SEMI
+%token RANGE_SYMBOL
 %token COMMA
 
 %token ADDR_OF_OP
@@ -114,6 +116,13 @@
 %type<ASTNode> derefOp
 
 %type<primtype> type
+
+%type<ASTNode> forLoop
+%type<ASTNode> forLoopHead
+
+%type<ASTNode> value
+%type<ASTNode> lvalue
+%type<ASTNode> rvalue
 
 %%
 // AST construction with semantic actions on page 259.
@@ -167,7 +176,7 @@ function: functionHead scope {
 		;
 
 functionHead: type ID LPAREN paramList RPAREN		{ $$ = AST::MakeFunctionNode($1, $2, $4); }
-			;
+						;
 
 paramList: paramList COMMA param	{ $1->MakeSiblings($3); $$ = $1; }
 		 | param
@@ -176,7 +185,7 @@ paramList: paramList COMMA param	{ $1->MakeSiblings($3); $$ = $1; }
 
 param: type ID						{ $$ = AST::MakeArgNode($2, $1); }
 		 | type SYM_PTR ID		{ $$ = AST::MakeArgNode($3, PrimitiveType::pointer, $1); }
-	 ;
+		 ;
 
 
 fwdDecl: type ID LPAREN paramList RPAREN SEMI		{ $$ = AST::MakeFwdDeclNode($1, $2, $4); }
@@ -196,9 +205,10 @@ stmts: stmts stmt SEMI				{ $$ = $1->MakeSiblings($2); }
 	 ;
 
 stmt: expr							{ $$ = $1; }
-	| varDecl						{ $$ = $1; }
-	| varAss						{ $$ = $1; }
+	| varDecl							{ $$ = $1; }
+	| varAss							{ $$ = $1; }
 	| returnOp						{ $$ = $1; }
+	| forLoop							{ $$ = $1; }
 	;
 
 
@@ -257,9 +267,17 @@ returnOp: KWD_RETURN expr			{ $$ = AST::MakeReturnNode($2); }
 //!Return operation ---------------------------------------------------------------------------
 
 
+// For loop -----------------------------------------------------------------------------------
+forLoop:	forLoopHead scope		{ $$ = AST::MakeForLoopNode($1, $2); }
+			 ;
+
+forLoopHead:	KWD_FOR LPAREN value RANGE_SYMBOL value RPAREN { $$ = AST::MakeForLoopHeadNode($5, $3); }
+					 ;
+//!For loop -----------------------------------------------------------------------------------
+
 // Function call ------------------------------------------------------------------------------
 functionCall: ID LPAREN argsList RPAREN	{ $$ = AST::MakeFunctionCallNode($1, $3); }
-			;
+						;
 
 argsList: argsList COMMA arg			{ $1->MakeSiblings($3); $$ = $1; }
 		 | arg							{ $$ = $1; }
@@ -281,6 +299,20 @@ addrOfOp:	ADDR_OF_OP ID { $$ = AST::MakeAddrOfNode($2); }
 derefOp: SYM_PTR expr		{ $$ = AST::MakeDerefNode($2); }
 			 ;
 //!Dereference --------------------------------------------------------------------------------
+
+
+// Value categories ---------------------------------------------------------------------------
+value: lvalue
+		 | rvalue
+		 ;
+
+lvalue: ID			{ $$ = AST::MakeSymNode($1); }
+			;
+
+rvalue: NUM_LIT	{ $$ = AST::MakeIntNode($1); }
+			;
+//!Value categories ---------------------------------------------------------------------------
+
 %%
 
 

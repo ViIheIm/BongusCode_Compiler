@@ -221,6 +221,28 @@ AST::Node* AST::MakeDerefNode(Node* expression)
   return node;
 }
 
+AST::Node* AST::MakeForLoopNode(Node* head, Node* body)
+{
+  ForLoopNode* node = new ForLoopNode();
+  assert(node && "Failed to allocate for loop node");
+  node->kind = Node_k::ForLoopNode;
+  node->head = head;
+  node->body = body;
+
+  return node;
+}
+
+AST::Node* AST::MakeForLoopHeadNode(Node* upperBound, Node* lowerBound)
+{
+  ForLoopHeadNode* node = new ForLoopHeadNode();
+  assert(node && "Failed to allocate for loop head node");
+  node->kind = Node_k::ForLoopHeadNode;
+  node->upperBound = upperBound;
+  node->lowerBound = lowerBound;
+
+  return node;
+}
+
 AST::Node* AST::MakeNullNode()
 {
     Node* node = new Node();

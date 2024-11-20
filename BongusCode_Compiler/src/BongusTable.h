@@ -143,5 +143,7 @@ enum class Node_k : ui16
 	FunctionCallNode,
 	FwdDeclNode,
 	AddrOfNode,
-	DerefNode
+	DerefNode,
+	ForLoopNode,
+	ForLoopHeadNode,
 };

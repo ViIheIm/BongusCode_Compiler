@@ -209,3 +209,25 @@ std::vector<AST::Node*> AST::DerefNode::GetChildren(void)
 
   return res;
 }
+
+std::vector<AST::Node*> AST::ForLoopNode::GetChildren(void)
+{
+  // Run base implementation first.
+  std::vector<Node*> res = Node::GetChildren();
+
+  res.push_back(head);
+  res.push_back(body);
+
+  return res;
+}
+
+std::vector<AST::Node*> AST::ForLoopHeadNode::GetChildren(void)
+{
+  // Run base implementation first.
+  std::vector<Node*> res = Node::GetChildren();
+
+  res.push_back(upperBound);
+  res.push_back(lowerBound);
+
+  return res;
+}
