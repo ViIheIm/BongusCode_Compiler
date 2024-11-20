@@ -98,7 +98,7 @@ inline const wchar_t* PrimitiveTypeReflectionWide[] = {
 
 
 #pragma region PrimitiveTypesList
-#define LIST(X) X(invalid) X(nihil) X(ui8) X(i8) X(ui16) X(i16) X(ui32) X(i32) X(ui64) X(i64)
+#define LIST(X) X(invalid) X(nihil) X(pointer) X(ui8) X(i8) X(ui16) X(i16) X(ui32) X(i32) X(ui64) X(i64)
 #pragma endregion
 
 #define X(val) val,
@@ -126,3 +126,24 @@ inline const wchar_t* PrimitiveTypeReflectionWide[] = {
 // The default name of the main function. When generating this function, it must be swapped out for the unmangled "main" for the linker to catch on.
 inline const char* NarrowMainFunctionName = "Viviscere";
 inline const wchar_t* WideMainFunctionName = L"Viviscere";
+
+// Node kind.
+enum class Node_k : ui16
+{
+	Node,
+	IntNode,
+	SymNode,
+	OpNode,
+	AssNode,
+	ScopeNode,
+	DeclNode,
+	ReturnNode,
+	FunctionNode,
+	ArgNode,
+	FunctionCallNode,
+	FwdDeclNode,
+	AddrOfNode,
+	DerefNode,
+	ForLoopNode,
+	ForLoopHeadNode,
+};

@@ -164,7 +164,70 @@ std::vector<AST::Node*> AST::FunctionNode::GetChildren(void)
     if (argsList != nullptr)
     {
         res.push_back(argsList);
+
+        for (Node* nextNode = argsList->GetRightSibling(); nextNode != nullptr; nextNode = nextNode->GetRightSibling())
+        {
+          res.push_back(nextNode);
+        }
     }
 
     return res;
+}
+
+std::vector<AST::Node*> AST::FunctionCallNode::GetChildren(void)
+{
+  // Run base implementation first.
+  std::vector<Node*> res = Node::GetChildren();
+
+  if (args != nullptr)
+  {
+    res.push_back(args);
+
+    for (Node* nextNode = args->GetRightSibling(); nextNode != nullptr; nextNode = nextNode->GetRightSibling())
+    {
+      res.push_back(nextNode);
+    }
+  }
+
+  return res;
+}
+
+std::vector<AST::Node*> AST::DerefNode::GetChildren(void)
+{
+  // Run base implementation first.
+  std::vector<Node*> res = Node::GetChildren();
+
+  if (expr != nullptr)
+  {
+    res.push_back(expr);
+
+    for (Node* nextNode = expr->GetRightSibling(); nextNode != nullptr; nextNode = nextNode->GetRightSibling())
+    {
+      res.push_back(nextNode);
+    }
+  }
+
+  return res;
+}
+
+std::vector<AST::Node*> AST::ForLoopNode::GetChildren(void)
+{
+  // Run base implementation first.
+  std::vector<Node*> res = Node::GetChildren();
+
+  res.push_back(head);
+  res.push_back(body);
+
+  return res;
+}
+
+std::vector<AST::Node*> AST::ForLoopHeadNode::GetChildren(void)
+{
+  // Run base implementation first.
+  std::vector<Node*> res = Node::GetChildren();
+
+  res.push_back(upperBound);
+  res.push_back(lowerBound);
+
+  return res;
 }

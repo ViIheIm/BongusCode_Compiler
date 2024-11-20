@@ -18,6 +18,7 @@ AST::Node* AST::MakeSymNode(std::wstring* s)
     assert(node && "Failed to allocate sym node");
     node->c = *s;
     node->kind = Node_k::SymNode;
+    node->entry = nullptr;
 
     // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
     delete s;
@@ -54,13 +55,15 @@ AST::Node* AST::MakeScopeNode()
     return node;
 }
 
-AST::Node* AST::MakeDeclNode(std::wstring* s, PrimitiveType type)
+AST::Node* AST::MakeDeclNode(std::wstring* s, const PrimitiveType type, const PrimitiveType pointeeType)
 {
     DeclNode* node = new DeclNode();
     assert(node && "Failed to allocate decl node");
     node->c = *s;
     node->t = type;
+    node->pointeeType = pointeeType;
     node->kind = Node_k::DeclNode;
+    node->entry = nullptr;
     
     // Figure out size.
     switch (type)
@@ -96,6 +99,11 @@ AST::Node* AST::MakeDeclNode(std::wstring* s, PrimitiveType type)
         node->size = 8;
         break;
     }
+    case PrimitiveType::pointer:
+    {
+        node->size = 8;
+        break;
+    }
     default:
     {
         node->size = -1;
@@ -104,10 +112,6 @@ AST::Node* AST::MakeDeclNode(std::wstring* s, PrimitiveType type)
         break;
     }
     }
-
-    // Default scope depth to 0. This is properly handled later in the harvest pass over the AST.
-    node->scopeDepth = 0;
-
 
     // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l, and in the function nonterminal in the parser.
     delete s;
@@ -135,19 +139,23 @@ AST::Node* AST::MakeFunctionNode(PrimitiveType retType, std::wstring* s, Node* a
     // In the case of a Nihil arg (e.g. i32 main(Nihil)), argsListNode will be nullptr, so that is perfectly valid behaviour.
     node->argsList = argsListNode;
 
+    node->entry = nullptr;
+
     // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
     delete s;
 
     return node;
 }
 
-AST::Node* AST::MakeArgNode(PrimitiveType type, std::wstring* s)
+AST::Node* AST::MakeArgNode(std::wstring* s, const PrimitiveType type, const PrimitiveType pointeeType)
 {
     ArgNode* node = new ArgNode();
     assert(node && "Failed to allocate arg node");
     node->c = *s;
     node->kind = Node_k::ArgNode;
+    node->pointeeType = pointeeType;
     node->type = type;
+    node->entry = nullptr;
 
     // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
     delete s;
@@ -180,10 +188,59 @@ AST::Node* AST::MakeFwdDeclNode(PrimitiveType retType, std::wstring* s, Node* ar
     // In the case of a Nihil arg (e.g. i32 main(Nihil)), argsListNode will be nullptr, so that is perfectly valid behaviour.
     node->argsList = argsListNode;
 
+    node->entry = nullptr;
+
     // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
     delete s;
 
     return node;
+}
+
+AST::Node* AST::MakeAddrOfNode(std::wstring* name)
+{
+  AddrOfNode* node = new AddrOfNode();
+  assert(node && "Failed to allocate addr of node");
+  node->kind = Node_k::AddrOfNode;
+  node->name = *name;
+  node->entry = nullptr;
+
+  // Accommodate the whack handover of the string. The allocation is found in {ID} in lexer.l.
+  delete name;
+
+  return node;
+}
+
+AST::Node* AST::MakeDerefNode(Node* expression)
+{
+  DerefNode* node = new DerefNode();
+  assert(node && "Failed to allocate deref node");
+  node->kind = Node_k::DerefNode;
+  node->expr = expression;
+
+
+  return node;
+}
+
+AST::Node* AST::MakeForLoopNode(Node* head, Node* body)
+{
+  ForLoopNode* node = new ForLoopNode();
+  assert(node && "Failed to allocate for loop node");
+  node->kind = Node_k::ForLoopNode;
+  node->head = head;
+  node->body = body;
+
+  return node;
+}
+
+AST::Node* AST::MakeForLoopHeadNode(Node* upperBound, Node* lowerBound)
+{
+  ForLoopHeadNode* node = new ForLoopHeadNode();
+  assert(node && "Failed to allocate for loop head node");
+  node->kind = Node_k::ForLoopHeadNode;
+  node->upperBound = upperBound;
+  node->lowerBound = lowerBound;
+
+  return node;
 }
 
 AST::Node* AST::MakeNullNode()
@@ -208,4 +265,37 @@ void AST::DoForAllChildren(Node* parent, void(*callback)(Node*, void*), void* ar
             callback(n, args);
         }
     }
+}
+
+std::vector<AST::Node*> AST::GetAllChildrenRecursively(Node* parent)
+{
+  // Frail recursion simulation again.
+  std::vector<Node*> allChildren{ parent };
+
+  for (i32 i = 0; i < allChildren.size(); i++)
+  {
+    for (Node* n : allChildren[i]->GetChildren())
+    {
+      allChildren.push_back(n);
+    }
+  }
+
+  return allChildren;
+}
+
+std::vector<AST::Node*> AST::GetAllChildNodesOfType(Node* parent, const Node_k kind)
+{
+  std::vector<Node*> allChildren = GetAllChildrenRecursively(parent);
+
+  std::vector<Node*> childrenOfKind;
+
+  for (Node* n : allChildren)
+  {
+    if (n->kind == kind)
+    {
+      childrenOfKind.push_back(n);
+    }
+  }
+
+  return childrenOfKind;
 }

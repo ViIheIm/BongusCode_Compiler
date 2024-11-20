@@ -14,8 +14,10 @@ struct SymTabEntry
 		{
 			PrimitiveType type;
 			ui32 size;
-			// Filled in codegen.cpp
-			ui32 adress;
+			// Address is filled in codegen.cpp, and is defaulted to -1 in SymTable::EnterSymbol().
+			i32 adress;
+			// Typically PrimitiveType::invalid, but not for pointers.
+			PrimitiveType pointeeType;
 		} asVar;
 
 		struct
@@ -26,44 +28,50 @@ struct SymTabEntry
 };
 
 /*
-	A symbol table key is composed of its name concatenated with a dot and its depth, e.g.
-	the source
+	Key composition.
 
+	nihil Foo(ui64 bar)
 	{
-		ui8 foo.
-
-		{
-			i8 bar.
-		}
+		i8 baz.
 	}
 
-	would yield the keys "foo.1" and "bar.2" respectively.
+	would yield the keys ".Foo" & ".Foo.bar" & ".Foo.baz" respectively.
 */
 
 class SymTable
 {
 public:
 
+	SymTable();
+	~SymTable() = default;
+
+	// These 2 are deprecated.
 	void OpenScope(void);
 	void CloseScope(void);
-	inline const i16 GetScopeDepth(void) const { return depth; }
 
-	std::wstring ComposeKey(const std::wstring& name, i16 scopeDepth);
+	// Use these instead.
+	void OpenFunction(const std::wstring& name);
+	void CloseFunction(void);
 
-	void EnterSymbol(const std::wstring& name, PrimitiveType type, ui32 size, const bool isFunction);
+	std::wstring ComposeKey(const std::wstring& name);
+	std::wstring ComposeGlobalKey(const std::wstring& name);
+
+	SymTabEntry* EnterSymbol(const std::wstring& name, const PrimitiveType type, const PrimitiveType pointeeType, ui32 size, const bool isFunction);
 
 	// The key here should be composed with ComposeKey already.
 	SymTabEntry* RetrieveSymbol(const std::wstring& composedKey);
 
-	// bool DeclaredLocally(const std::wstring& key);
-
-	static const i16 s_globalNamespace = 0;
 
 private:
 
 	std::unordered_map<std::wstring, SymTabEntry> table;
+	
+	// Deprecated
 	i16 depth = 0;
+	static const std::wstring s_globalNamespace;
 
+	// For prepending unto variables.
+	std::wstring currentFunction;
 };
 
 // Global symbol table instance.
