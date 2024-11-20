@@ -114,6 +114,7 @@ namespace Registers
 		{
 		case PrimitiveType::ui64:
 		case PrimitiveType::i64:
+		case PrimitiveType::pointer:
 			return 0;
 
 		case PrimitiveType::ui32:
@@ -154,9 +155,11 @@ void ProcessLocalsCallback(AST::Node* n, void* args)
 	{
 		AST::DeclNode* asDeclNode = (AST::DeclNode*)n;
 
-		std::wstring key = g_symTable.ComposeKey(asDeclNode->GetName(), asDeclNode->GetScopeDepth());
-		SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+		//std::wstring key = g_symTable.ComposeKey(asDeclNode->GetName(), asDeclNode->GetScopeDepth());
+		//SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+		SymTabEntry* entry = asDeclNode->GetSymTabEntry();
 		entry->asVar.adress = *allocSize;
+
 
 		*allocSize += asDeclNode->GetSize();
 	}
@@ -237,6 +240,7 @@ inline static const ui16 GetSizeFromType(const PrimitiveType type)
 	{
 	case PrimitiveType::ui64:
 	case PrimitiveType::i64:
+	case PrimitiveType::pointer:
 		return 8;
 	case PrimitiveType::ui32:
 	case PrimitiveType::i32:
@@ -344,81 +348,49 @@ bool FindNodeInVisitedNodes(AST::Node* node)
 #include <iostream>
 namespace Body
 {
-	inline static std::string RefTempVar(const i32 offset, const PrimitiveType type)
+	inline static std::string GetWordKindFromType(const PrimitiveType type)
 	{
-		// EXAMPLE:
-		// mov eax, DWORD PTR 4[rsp]					// Go past the locals and into the temporaries section of the stack.
-
-		std::string wordKind;
-
-		switch (type)
-		{
-			case PrimitiveType::ui64:
-			case PrimitiveType::i64:
-			{
-				wordKind = "QWORD PTR";
-				break;
-			}
-
-			case PrimitiveType::ui32:
-			case PrimitiveType::i32:
-			{
-				wordKind = "DWORD PTR";
-				break;
-			}
-
-			case PrimitiveType::ui16:
-			case PrimitiveType::i16:
-			{
-				wordKind = "WORD PTR";
-				break;
-			}
-
-			default:
-			{
-				wprintf(L"ERROR: Type %hu supplied to " __FUNCSIG__ " is invalid.\n", type);
-				Exit(ErrCodes::internal_compiler_error);
-				break;
-			}
-		}
-
-		return std::string(wordKind + " " + std::to_string(CurrentFunctionMetaData::varsStackSectionSize + offset) + "[rsp]");
-	}
-	inline static std::string RefLocalVar(const i32 offset, const PrimitiveType type)
-	{
-		std::string wordKind;
-
 		switch (type)
 		{
 		case PrimitiveType::ui64:
 		case PrimitiveType::i64:
+		case PrimitiveType::pointer:
 		{
-			wordKind = "QWORD PTR";
+			return std::string("QWORD PTR");
 			break;
 		}
 
 		case PrimitiveType::ui32:
 		case PrimitiveType::i32:
 		{
-			wordKind = "DWORD PTR";
-			break;
+			return std::string("DWORD PTR");
 		}
 
 		case PrimitiveType::ui16:
 		case PrimitiveType::i16:
 		{
-			wordKind = "WORD PTR";
-			break;
+			return std::string("WORD PTR");
 		}
 
 		default:
 		{
 			wprintf(L"ERROR: Type %hu supplied to " __FUNCSIG__ " is invalid.\n", type);
 			Exit(ErrCodes::internal_compiler_error);
-			break;
 		}
 		}
+	}
 
+	inline static std::string RefTempVar(const i32 offset, const PrimitiveType type)
+	{
+		// EXAMPLE:
+		// mov eax, DWORD PTR 4[rsp]					// Go past the locals and into the temporaries section of the stack.
+
+		std::string wordKind = GetWordKindFromType(type);
+		return std::string(wordKind + " " + std::to_string(CurrentFunctionMetaData::varsStackSectionSize + offset) + "[rsp]");
+	}
+	inline static std::string RefLocalVar(const i32 offset, const PrimitiveType type)
+	{
+		std::string wordKind = GetWordKindFromType(type);
 		return std::string(wordKind + " " + std::to_string(offset) + "[rsp]");
 	}
 
@@ -520,8 +492,9 @@ namespace Body
 		{
 			AST::SymNode* asSymNode = (AST::SymNode*)node;
 
-			std::wstring key = g_symTable.ComposeKey(asSymNode->GetName(), 1); // TODO: Restructure symbol table.
-			SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+			//std::wstring key = g_symTable.ComposeKey(asSymNode->GetName(), 1); // TODO: Restructure symbol table.
+			//SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+			SymTabEntry* entry = asSymNode->GetSymTabEntry();
 
 			if (entry == nullptr)
 			{
@@ -583,7 +556,8 @@ namespace Body
 			// We've already made sure in the harvest pass that this is indeed a function, and in the semantics pass that this function can be called.
 			std::string output;
 
-			PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+			//PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+			PrimitiveType funcRetType = asFunctionCallNode->GetSymTabEntry()->asFunction.retType;
 			PushArgsIntoRegs(output, asFunctionCallNode);
 
 			// Get the mangled function name!
@@ -593,6 +567,83 @@ namespace Body
 			output += "; " + t0.name + " = result of function " + mangledFunctionName + "\n" +
 					  "call " + mangledFunctionName + "\n" +
 					  "mov " + RefTempVar(t0.adress, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
+
+			code += output;
+
+			break;
+		}
+		case Node_k::AddrOfNode:
+		{
+			AST::AddrOfNode* asAddrOfNode = (AST::AddrOfNode*)node;
+			SymTabEntry* entry = asAddrOfNode->GetSymTabEntry();
+			const PrimitiveType addrOfNodeExprType = PrimitiveType::pointer;
+
+			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
+
+			std::string readReg(GetReg(RG::RAX, addrOfNodeExprType));
+			const std::string& writeReg = GetReg(RG::RAX, exprType);
+
+			std::string output = "\n; " + t0.name + " = (addr of local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
+				"lea " + readReg + ", " + RefLocalVar(entry->asVar.adress, addrOfNodeExprType) +
+				"\nmov " + RefTempVar(t0.adress, addrOfNodeExprType) + ", " + writeReg + "\n";
+
+			code += output;
+
+			break;
+		}
+		case Node_k::DerefNode:
+		{
+			AST::DerefNode* asDerefNode = (AST::DerefNode*)node;
+			const PrimitiveType pointerType = PrimitiveType::pointer;
+			
+			/*
+				Hunt through the subexpr until we find a pointer node.
+				Most sane dereference operations evolve from a single pointer, e.g.
+					¤(pointer + 1) = 200
+				and not typically
+					¤(pointer + **another pointer**) = 200
+
+				in fact(just checked this in compiler explorer), adding a pointer to another pointer in C++ raises an error,
+				so we can safely look for only 1 pointer in the subexpression, and take it's pointeeType.
+				
+				There's a safety check in the semantics pass which checks for more than 1 pointer in a subexpression,
+				which raises an error if several are found, so we can happily pick the first pointee type here and call it a day.
+			*/
+			PrimitiveType pointeeType = AST::IntNode::s_defaultIntLiteralType;
+			for (AST::Node* symNode : AST::GetAllChildNodesOfType(asDerefNode, Node_k::SymNode))
+			{
+				AST::SymNode* asSymNode = (AST::SymNode*)symNode;
+				SymTabEntry* entry = asSymNode->GetSymTabEntry();
+
+				if (entry->asVar.type == PrimitiveType::pointer)
+				{
+					// Find first pointer, get it's pointee-type and break.
+					pointeeType = entry->asVar.pointeeType;
+					break;
+				}
+			}
+
+			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+			GenOpNodeCode(code, asDerefNode->GetExpr(), t1, pointerType);
+
+			/*
+				mov     rax, QWORD PTR b$[rsp]
+				movzx   eax, WORD PTR[rax]
+			*/
+
+			std::string readReg(GetReg(RG::RAX, pointeeType));
+			std::string movToRaxOp("mov ");
+			std::string wordKind = GetWordKindFromType(pointeeType);
+			if (pointeeType == PrimitiveType::ui16 || pointeeType == PrimitiveType::i16)
+			{
+				movToRaxOp = "movzx ";
+				readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
+			}
+
+			// By this point, the entire expression should be generated and held in rax.
+			// Dereference rax and store it out in _t0.
+			std::string output = "\n; _t0 = Deref operation of previous expr(rax).\n" +
+				movToRaxOp + readReg + ", " + wordKind + "[RAX]\n";
 
 			code += output;
 
@@ -616,15 +667,20 @@ namespace Body
 			case Node_k::SymNode:
 			{
 				AST::SymNode* asSymNode = (AST::SymNode*)n;
-				SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asSymNode->GetName(), 1));
+				SymTabEntry* entry = asSymNode->GetSymTabEntry();
 				return entry->asVar.type;
 				break;
 			}
 			case Node_k::FunctionCallNode:
 			{
 				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)n;
-				SymTabEntry* entry = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), 1));
+				SymTabEntry* entry = asFunctionCallNode->GetSymTabEntry();
 				return entry->asFunction.retType;
+				break;
+			}
+			case Node_k::AddrOfNode:
+			{
+				return PrimitiveType::pointer;
 				break;
 			}
 			default:
@@ -684,8 +740,9 @@ namespace Body
 		{
 			AST::ArgNode* asArgNode = (AST::ArgNode*)node;
 
-			std::wstring composedKey = g_symTable.ComposeKey(asArgNode->GetName(), 1);
-			SymTabEntry* entry = g_symTable.RetrieveSymbol(composedKey);
+			//std::wstring composedKey = g_symTable.ComposeKey(asArgNode->GetName(), 1);
+			//SymTabEntry* entry = g_symTable.RetrieveSymbol(composedKey);
+			SymTabEntry* entry = asArgNode->GetSymTabEntry();
 
 			std::string readReg(GetReg(callingConvention[nextSlot], entry->asVar.type));
 			std::string movToRaxOp("mov ");
@@ -745,8 +802,9 @@ namespace Body
 				{
 					AST::SymNode* var = (AST::SymNode*)asAssNode->GetVar();
 
-					std::wstring key = g_symTable.ComposeKey(var->GetName(), 1); // TODO: Restructure symbol table.
-					SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+					//std::wstring key = g_symTable.ComposeKey(var->GetName(), 1); // TODO: Restructure symbol table.
+					//SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+					SymTabEntry* entry = var->GetSymTabEntry();
 
 					if (entry == nullptr)
 					{
@@ -795,8 +853,6 @@ namespace Body
 
 				// Generate operation code. Remember that the temporaries stack section needs to be reset!
 				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
-				// TODO: The type supplied here from outside(s_defaultType/i32) will be too small to hold values gathered from ui64s/i64s.
-				// In the future, fix this by properly implementing functions, so we may stick it's return type here instead.
 				GenOpNodeCode(code, asReturnNode->GetRetExpr(), t0, retType);
 
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
@@ -808,15 +864,16 @@ namespace Body
 				// TODO: We're no longer generating the epilogue when we return. Instead, if we find a return statement(in an if-statement), stick the result in RAX and GOTO(!)
 				// the epilogue of the function, skipping all the other code in between.
 				// On the other hand, if we find a lone return statement that obscures code after it, we just raise an error.
-				// CurrentFunctionMetaData::temporariesStackSectionSize = *largestTempAllocation;
-				// Epilogue::GenerateFunctionEpilogue(code, CurrentFunctionMetaData::varsStackSectionSize, CurrentFunctionMetaData::temporariesStackSectionSize);
 
 				break;
 			}
 			case Node_k::FunctionCallNode:
 			{
 				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
-				PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+				
+				//PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
+				PrimitiveType funcRetType = asFunctionCallNode->GetSymTabEntry()->asFunction.retType;
+				
 				PushArgsIntoRegs(code, asFunctionCallNode);
 				code += "call " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
 			}

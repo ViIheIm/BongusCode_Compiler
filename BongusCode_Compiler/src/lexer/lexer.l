@@ -24,6 +24,7 @@ COMMENT			"||"[^\n]*
 WHITESPACE		[[:space:]]+
 
 KWD_NIHIL		"nihil"
+SYM_PTR			¤
 KWD_UI8			"ui8"
 KWD_I8			"i8"
 KWD_UI16		"ui16"
@@ -34,6 +35,7 @@ KWD_UI64		"ui64"
 KWD_I64			"i64"
 
 KWD_RETURN		"Claudere"
+KWD_FOR				"For"
 
 ID				[[:alpha:]_][[:alnum:]_]*
 NUM_LIT			0|[1-9][0-9]*
@@ -51,7 +53,10 @@ LCURLY			\{
 RCURLY			\}
 
 SEMI			\.
+RANGE_SYMBOL	⇢
 COMMA			\,
+
+ADDR_OF_OP	&
 
 %%
 
@@ -61,6 +66,10 @@ COMMA			\,
 {KWD_NIHIL}
 	LEXLOG(L"Found KWD_NIHIL: %s\n", wstr().c_str());
 	return BTok::KWD_NIHIL;
+
+{SYM_PTR}
+	LEXLOG(L"Found SYM_PTR: %s\n", wstr().c_str());
+	return BTok::SYM_PTR;
 
 {KWD_UI8}
 	LEXLOG(L"Found KWD_UI8: %s\n", wstr().c_str());
@@ -97,6 +106,10 @@ COMMA			\,
 {KWD_RETURN}
 	LEXLOG(L"Found KWD_RETURN: %s\n", wstr().c_str());
 	return BTok::KWD_RETURN;
+
+{KWD_FOR}
+	LEXLOG(L"Found KWD_FOR: %s\n", wstr().c_str());
+	return BTok::KWD_FOR;
 
 {ID}
 	LEXLOG(L"Found ID: %s\n", wstr().c_str());
@@ -156,8 +169,16 @@ COMMA			\,
 	LEXLOG(L"Found SEMI: %s\n", wstr().c_str());
 	return BTok::SEMI;
 
+{RANGE_SYMBOL}
+	LEXLOG(L"Found RANGE_SYMBOL: %s\n", wstr().c_str());
+	return BTok::RANGE_SYMBOL;
+
 {COMMA}
 	LEXLOG(L"Found COMMA: %s\n", wstr().c_str());
 	return BTok::COMMA;
+
+{ADDR_OF_OP}
+	LEXLOG(L"Found ADDR_OF_OP: %s\n", wstr().c_str());
+	return BTok::ADDR_OF_OP;
 
 %%

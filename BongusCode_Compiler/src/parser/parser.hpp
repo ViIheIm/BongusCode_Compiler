@@ -248,26 +248,30 @@ namespace yy {
     ID = 258,                      // ID
     NUM_LIT = 259,                 // NUM_LIT
     KWD_NIHIL = 260,               // KWD_NIHIL
-    KWD_UI8 = 261,                 // KWD_UI8
-    KWD_I8 = 262,                  // KWD_I8
-    KWD_UI16 = 263,                // KWD_UI16
-    KWD_I16 = 264,                 // KWD_I16
-    KWD_UI32 = 265,                // KWD_UI32
-    KWD_I32 = 266,                 // KWD_I32
-    KWD_UI64 = 267,                // KWD_UI64
-    KWD_I64 = 268,                 // KWD_I64
-    KWD_RETURN = 269,              // KWD_RETURN
-    EQ_OP = 270,                   // EQ_OP
-    PLUS_OP = 271,                 // PLUS_OP
-    MINUS_OP = 272,                // MINUS_OP
-    MUL_OP = 273,                  // MUL_OP
-    DIV_OP = 274,                  // DIV_OP
-    LPAREN = 275,                  // LPAREN
-    RPAREN = 276,                  // RPAREN
-    LCURLY = 277,                  // LCURLY
-    RCURLY = 278,                  // RCURLY
-    SEMI = 279,                    // SEMI
-    COMMA = 280                    // COMMA
+    SYM_PTR = 261,                 // SYM_PTR
+    KWD_UI8 = 262,                 // KWD_UI8
+    KWD_I8 = 263,                  // KWD_I8
+    KWD_UI16 = 264,                // KWD_UI16
+    KWD_I16 = 265,                 // KWD_I16
+    KWD_UI32 = 266,                // KWD_UI32
+    KWD_I32 = 267,                 // KWD_I32
+    KWD_UI64 = 268,                // KWD_UI64
+    KWD_I64 = 269,                 // KWD_I64
+    KWD_RETURN = 270,              // KWD_RETURN
+    KWD_FOR = 271,                 // KWD_FOR
+    EQ_OP = 272,                   // EQ_OP
+    PLUS_OP = 273,                 // PLUS_OP
+    MINUS_OP = 274,                // MINUS_OP
+    MUL_OP = 275,                  // MUL_OP
+    DIV_OP = 276,                  // DIV_OP
+    LPAREN = 277,                  // LPAREN
+    RPAREN = 278,                  // RPAREN
+    LCURLY = 279,                  // LCURLY
+    RCURLY = 280,                  // RCURLY
+    SEMI = 281,                    // SEMI
+    RANGE_SYMBOL = 282,            // RANGE_SYMBOL
+    COMMA = 283,                   // COMMA
+    ADDR_OF_OP = 284               // ADDR_OF_OP
       };
       /// Backward compatibility alias (Bison 3.6).
       typedef token_kind_type yytokentype;
@@ -284,7 +288,7 @@ namespace yy {
     {
       enum symbol_kind_type
       {
-        YYNTOKENS = 26, ///< Number of tokens.
+        YYNTOKENS = 30, ///< Number of tokens.
         S_YYEMPTY = -2,
         S_YYEOF = 0,                             // "end of file"
         S_YYerror = 1,                           // error
@@ -292,49 +296,60 @@ namespace yy {
         S_ID = 3,                                // ID
         S_NUM_LIT = 4,                           // NUM_LIT
         S_KWD_NIHIL = 5,                         // KWD_NIHIL
-        S_KWD_UI8 = 6,                           // KWD_UI8
-        S_KWD_I8 = 7,                            // KWD_I8
-        S_KWD_UI16 = 8,                          // KWD_UI16
-        S_KWD_I16 = 9,                           // KWD_I16
-        S_KWD_UI32 = 10,                         // KWD_UI32
-        S_KWD_I32 = 11,                          // KWD_I32
-        S_KWD_UI64 = 12,                         // KWD_UI64
-        S_KWD_I64 = 13,                          // KWD_I64
-        S_KWD_RETURN = 14,                       // KWD_RETURN
-        S_EQ_OP = 15,                            // EQ_OP
-        S_PLUS_OP = 16,                          // PLUS_OP
-        S_MINUS_OP = 17,                         // MINUS_OP
-        S_MUL_OP = 18,                           // MUL_OP
-        S_DIV_OP = 19,                           // DIV_OP
-        S_LPAREN = 20,                           // LPAREN
-        S_RPAREN = 21,                           // RPAREN
-        S_LCURLY = 22,                           // LCURLY
-        S_RCURLY = 23,                           // RCURLY
-        S_SEMI = 24,                             // SEMI
-        S_COMMA = 25,                            // COMMA
-        S_YYACCEPT = 26,                         // $accept
-        S_program = 27,                          // program
-        S_globalEntries = 28,                    // globalEntries
-        S_globalEntry = 29,                      // globalEntry
-        S_function = 30,                         // function
-        S_functionHead = 31,                     // functionHead
-        S_paramList = 32,                        // paramList
-        S_param = 33,                            // param
-        S_fwdDecl = 34,                          // fwdDecl
-        S_scope = 35,                            // scope
-        S_stmts = 36,                            // stmts
-        S_stmt = 37,                             // stmt
-        S_expr = 38,                             // expr
-        S_addExpr = 39,                          // addExpr
-        S_mulExpr = 40,                          // mulExpr
-        S_factor = 41,                           // factor
-        S_varDecl = 42,                          // varDecl
-        S_type = 43,                             // type
-        S_varAss = 44,                           // varAss
-        S_returnOp = 45,                         // returnOp
-        S_functionCall = 46,                     // functionCall
-        S_argsList = 47,                         // argsList
-        S_arg = 48                               // arg
+        S_SYM_PTR = 6,                           // SYM_PTR
+        S_KWD_UI8 = 7,                           // KWD_UI8
+        S_KWD_I8 = 8,                            // KWD_I8
+        S_KWD_UI16 = 9,                          // KWD_UI16
+        S_KWD_I16 = 10,                          // KWD_I16
+        S_KWD_UI32 = 11,                         // KWD_UI32
+        S_KWD_I32 = 12,                          // KWD_I32
+        S_KWD_UI64 = 13,                         // KWD_UI64
+        S_KWD_I64 = 14,                          // KWD_I64
+        S_KWD_RETURN = 15,                       // KWD_RETURN
+        S_KWD_FOR = 16,                          // KWD_FOR
+        S_EQ_OP = 17,                            // EQ_OP
+        S_PLUS_OP = 18,                          // PLUS_OP
+        S_MINUS_OP = 19,                         // MINUS_OP
+        S_MUL_OP = 20,                           // MUL_OP
+        S_DIV_OP = 21,                           // DIV_OP
+        S_LPAREN = 22,                           // LPAREN
+        S_RPAREN = 23,                           // RPAREN
+        S_LCURLY = 24,                           // LCURLY
+        S_RCURLY = 25,                           // RCURLY
+        S_SEMI = 26,                             // SEMI
+        S_RANGE_SYMBOL = 27,                     // RANGE_SYMBOL
+        S_COMMA = 28,                            // COMMA
+        S_ADDR_OF_OP = 29,                       // ADDR_OF_OP
+        S_YYACCEPT = 30,                         // $accept
+        S_program = 31,                          // program
+        S_globalEntries = 32,                    // globalEntries
+        S_globalEntry = 33,                      // globalEntry
+        S_function = 34,                         // function
+        S_functionHead = 35,                     // functionHead
+        S_paramList = 36,                        // paramList
+        S_param = 37,                            // param
+        S_fwdDecl = 38,                          // fwdDecl
+        S_scope = 39,                            // scope
+        S_stmts = 40,                            // stmts
+        S_stmt = 41,                             // stmt
+        S_expr = 42,                             // expr
+        S_addExpr = 43,                          // addExpr
+        S_mulExpr = 44,                          // mulExpr
+        S_factor = 45,                           // factor
+        S_varDecl = 46,                          // varDecl
+        S_type = 47,                             // type
+        S_varAss = 48,                           // varAss
+        S_returnOp = 49,                         // returnOp
+        S_forLoop = 50,                          // forLoop
+        S_forLoopHead = 51,                      // forLoopHead
+        S_functionCall = 52,                     // functionCall
+        S_argsList = 53,                         // argsList
+        S_arg = 54,                              // arg
+        S_addrOfOp = 55,                         // addrOfOp
+        S_derefOp = 56,                          // derefOp
+        S_value = 57,                            // value
+        S_lvalue = 58,                           // lvalue
+        S_rvalue = 59                            // rvalue
       };
     };
 
@@ -822,8 +837,8 @@ namespace yy {
     /// Constants.
     enum
     {
-      yylast_ = 80,     ///< Last index in yytable_.
-      yynnts_ = 23,  ///< Number of nonterminal symbols.
+      yylast_ = 103,     ///< Last index in yytable_.
+      yynnts_ = 30,  ///< Number of nonterminal symbols.
       yyfinal_ = 15 ///< Termination state number.
     };
 
@@ -835,7 +850,7 @@ namespace yy {
 
 
 } // yy
-#line 839 "parser.hpp"
+#line 854 "parser.hpp"
 
 
 

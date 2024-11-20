@@ -2,26 +2,10 @@
 #include "../Definitions.h"
 #include "../BongusTable.h"
 #include "ASTAPI.h"
+#include "../symbol_table/symtable.h"
 #include <vector>
 
 class NodeVisitor;
-
-// Node kind.
-enum class Node_k : ui16
-{
-	Node,
-	IntNode,
-	SymNode,
-	OpNode,
-	AssNode,
-	ScopeNode,
-	DeclNode,
-	ReturnNode,
-	FunctionNode,
-	ArgNode,
-	FunctionCallNode,
-	FwdDeclNode
-};
 
 namespace AST
 {
@@ -55,6 +39,7 @@ namespace AST
 
 		friend Node* MakeNullNode();
 		friend void DoForAllChildren(Node*, void(*)(Node*, void*), void*);
+		friend std::vector<Node*> GetAllChildNodesOfType(Node*, const Node_k);
 
 	protected:
 	
@@ -75,6 +60,18 @@ namespace AST
 		Node_k kind;
 	};
 
+	// Superclass for nodes that need symbol table access to derive from.
+	class SymTableAccessor
+	{
+	public:
+
+		inline void SetSymTabEntry(SymTabEntry* newEntry) { entry = newEntry; }
+		inline SymTabEntry* GetSymTabEntry(void) const { return entry; }
+
+	protected:
+
+		SymTabEntry* entry;
+	};
 
 	// Represents raw literals.
 	class IntNode : public Node
@@ -95,7 +92,7 @@ namespace AST
 
 
 	// Represents IDs like variables.
-	class SymNode : public Node
+	class SymNode : public Node, public SymTableAccessor
 	{
 	public:
 
@@ -174,7 +171,7 @@ namespace AST
 
 
 	// Represents only the declaration of a variable.
-	class DeclNode : public Node
+	class DeclNode : public Node, public SymTableAccessor
 	{
 	public:
 
@@ -182,17 +179,16 @@ namespace AST
 		virtual ~DeclNode() override = default;
 		inline const std::wstring& GetName(void) const { return c; }
 		inline const PrimitiveType GetType(void) const { return t; }
+		inline const PrimitiveType GetPointeeType(void) const { return pointeeType; }
 		inline const i16 GetSize(void) const { return size; }
-		inline const i16 GetScopeDepth(void) const { return scopeDepth; }
-		inline void SetScopeDepth(const i16 depth) { scopeDepth = depth; }
-		friend Node* MakeDeclNode(std::wstring*, PrimitiveType);
+		friend Node* MakeDeclNode(std::wstring*, const PrimitiveType, const PrimitiveType);
 
 	private:
 
 		std::wstring c;
 		PrimitiveType t;
+		PrimitiveType pointeeType;
 		i16 size;
-		i16 scopeDepth;
 	};
 
 	// Represents a return operation.
@@ -208,13 +204,12 @@ namespace AST
 
 	private:
 
-		// Should always be an opnode, but this is enforced(warned about if it is not adhered to) in the makenode-function.
 		Node* retExpr;
 
 	};
 
 	// Represents an entire function. The node is it's head, and it's children the body.
-	class FunctionNode : public Node
+	class FunctionNode : public Node, public SymTableAccessor
 	{
 	public:
 
@@ -236,7 +231,7 @@ namespace AST
 	};
 
 	// Represents a single argument in an argument list. The list itself is made by using rSiblings. Not much different to SymNodes yet.
-	class ArgNode : public Node
+	class ArgNode : public Node, public SymTableAccessor
 	{
 	public:
 
@@ -244,21 +239,23 @@ namespace AST
 		virtual ~ArgNode() override = default;
 		inline const std::wstring& GetName(void) const { return c; }
 		inline const PrimitiveType GetType(void) const { return type; }
-		friend Node* MakeArgNode(PrimitiveType, std::wstring*);
+		friend Node* MakeArgNode(std::wstring*, const PrimitiveType, const PrimitiveType);
 
 	private:
 
 		std::wstring c;
 		PrimitiveType type;
+		PrimitiveType pointeeType;
 	};
 
 	// Represents the result of calling a function.
-	class FunctionCallNode : public Node
+	class FunctionCallNode : public Node, public SymTableAccessor
 	{
 	public:
 
 		FunctionCallNode() = default;
 		virtual ~FunctionCallNode() override = default;
+		virtual std::vector<Node*> GetChildren(void) override;
 		inline const std::wstring& GetName(void) const { return c; }
 		inline Node* GetArgs(void) const { return args; }
 		friend Node* MakeFunctionCallNode(std::wstring*, Node*);
@@ -269,7 +266,7 @@ namespace AST
 		Node* args;
 	};
 
-	class FwdDeclNode : public Node
+	class FwdDeclNode : public Node, public SymTableAccessor
 	{
 	public:
 		FwdDeclNode() = default;
@@ -285,5 +282,61 @@ namespace AST
 		std::wstring name;
 		PrimitiveType retType;
 		Node* argsList;
+	};
+
+	class AddrOfNode : public Node, public SymTableAccessor
+	{
+	public:
+		AddrOfNode() = default;
+		virtual ~AddrOfNode() override = default;
+		inline const std::wstring& GetName(void) const { return name; }
+		friend Node* MakeAddrOfNode(std::wstring*);
+
+	private:
+		std::wstring name;
+	};
+
+	class DerefNode : public Node
+	{
+	public:
+		DerefNode() = default;
+		virtual ~DerefNode() override = default;
+		virtual std::vector<Node*> GetChildren(void) override;
+
+		inline Node* GetExpr(void) const { return expr; }
+		friend Node* MakeDerefNode(Node*);
+
+	private:
+		Node* expr;
+	};
+
+	class ForLoopNode : public Node
+	{
+	public:
+		ForLoopNode() = default;
+		virtual ~ForLoopNode() override = default;
+		virtual std::vector<Node*> GetChildren(void) override;
+		inline Node* GetHead(void) const { return head; }
+		inline Node* GetBody(void) const { return body; }
+		friend Node* MakeForLoopNode(Node*, Node*);
+
+	private:
+		Node* head;
+		Node* body;
+	};
+
+	class ForLoopHeadNode : public Node
+	{
+	public:
+		ForLoopHeadNode() = default;
+		virtual ~ForLoopHeadNode() override = default;
+		virtual std::vector<Node*> GetChildren(void) override;
+		inline Node* GetUpperBound(void) const { return upperBound; }
+		inline Node* GetLowerBound(void) const { return lowerBound; }
+		friend Node* MakeForLoopHeadNode(Node*, Node*);
+
+	private:
+		Node* upperBound;
+		Node* lowerBound;
 	};
 }
