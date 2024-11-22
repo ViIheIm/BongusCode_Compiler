@@ -205,11 +205,11 @@ stmts: stmts stmt SEMI				{ $$ = $1->MakeSiblings($2); }
 	 ;
 
 stmt: expr							{ $$ = $1; }
-	| varDecl							{ $$ = $1; }
-	| varAss							{ $$ = $1; }
-	| returnOp						{ $$ = $1; }
-	| forLoop							{ $$ = $1; }
-	;
+		| varDecl						{ $$ = $1; }
+		| varAss						{ $$ = $1; }
+		| returnOp					{ $$ = $1; }
+		| forLoop						{ $$ = $1; }
+		;
 
 
 // Mathematical expression --------------------------------------------------------------------				

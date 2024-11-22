@@ -179,6 +179,8 @@ namespace CurrentFunctionMetaData
 	static std::string funcName("NO_NAME_ASSIGNED");
 
 	PrimitiveType retType;
+
+	AST::FunctionNode* currentFunction = nullptr;
 }
 
 // This uses pointers instead of modifying the above namespace's globals directly, so we can easily swap out where the metadata
@@ -395,6 +397,30 @@ namespace Body
 	}
 
 	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node);
+	
+	// Returns a tuple consisting of <read register, write register, mov type>
+	// Could be e.g. <EAX, EAX, movzx>.
+	inline static std::tuple<std::string, std::string, std::string> GetTypeDependentInstructions(
+		const RG readReg,
+		const RG writeReg,
+		const PrimitiveType readRegType,
+		const PrimitiveType writeRegType,
+		const PrimitiveType localVarType
+	)
+	{
+		std::string readRegStr(GetReg(readReg, readRegType));
+		std::string writeRegStr(GetReg(writeReg, writeRegType));
+		std::string movToRaxOpStr("mov ");
+
+		// If the local var we're moving into rax's type is 2 bytes in size then we need to zero extend it.
+		if (localVarType == PrimitiveType::ui16 || localVarType == PrimitiveType::i16)
+		{
+			movToRaxOpStr = "movzx ";
+			readRegStr = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
+		}
+		
+		return std::tuple(readRegStr, writeRegStr, movToRaxOpStr);
+	}
 
 	static void GenOpNodeCode(std::string& code, AST::Node* node, const TempVar& t0, const PrimitiveType exprType)
 	{
@@ -524,9 +550,9 @@ namespace Body
 
 			// One version of the register is for when we get the local variable into rax,
 			// and the other is for when we export the value from rax into the temporary.
+			/*
 			std::string readReg(GetReg(RG::RAX, smallestType));
 			const std::string& writeReg = GetReg(RG::RAX, exprType);
-
 
 			// If the local variable we're moving into rax is 2 bytes in size(ui16/i16), we need to zero extend it.
 			// If this is the case, readReg must also be changed from AX to RAX, so this ugly hackaround does that to.
@@ -537,6 +563,15 @@ namespace Body
 				movToRaxOp = "movzx ";
 				readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
 			}
+			*/
+
+			const auto [readReg, writeReg, movToRaxOp] = GetTypeDependentInstructions(
+				RG::RAX,
+				RG::RAX,
+				smallestType,
+				exprType,
+				entry->asVar.type
+			);
 
 			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
 								 movToRaxOp + readReg + ", " + RefLocalVar(entry->asVar.adress, smallestType) +
@@ -650,6 +685,160 @@ namespace Body
 			break;
 		}
 		}
+	}
+
+	// This function generates code to store a value into a memory address either through reading a variable
+	// or by supplying an immediate value, depending on if the node given is a symNode or an intNode.
+	inline static void GenAssignmentToStackMem(std::string& code, AST::Node* valueNode, const ui32 stackAddress, const PrimitiveType assigneeType)
+	{
+		std::string assignmentString = GetWordKindFromType(assigneeType) + " " + std::to_string(stackAddress) + "[rsp]";
+
+		switch (valueNode->GetNodeKind())
+		{
+		case Node_k::IntNode:
+		{
+			AST::IntNode* asIntNode = (AST::IntNode*)valueNode;
+
+			const std::string& toFromReg = GetReg(RG::RAX, assigneeType);
+
+			std::string output = "\nmov " + toFromReg + ", " + std::to_string(asIntNode->Get()) +
+							"\nmov " + assignmentString + ", " + toFromReg + "\n";
+
+			code += output;
+
+			break;
+		}
+		case Node_k::SymNode:
+		{
+			AST::SymNode* asSymNode = (AST::SymNode*)valueNode;
+			SymTabEntry* entry = asSymNode->GetSymTabEntry();
+			const PrimitiveType symType = entry->asVar.type;
+
+			const auto [readReg, writeReg, movToRaxOp] = GetTypeDependentInstructions(
+				RG::RAX,
+				RG::RAX,
+				symType,
+				assigneeType,
+				symType
+			);
+
+			std::string output = movToRaxOp + readReg + ", " + RefLocalVar(entry->asVar.adress, symType) +
+													 "\nmov " + assignmentString + ", " + writeReg + "\n";
+
+			code += output;
+
+			break;
+		}
+		}
+	}
+
+	inline static void GenForLoopHeadComparison(std::string& code, AST::Node* upperBound, const std::string& labelToJumpTo, const ui32 iterVarAddress, const PrimitiveType iterVarType)
+	{
+		switch (upperBound->GetNodeKind())
+		{
+		case Node_k::IntNode:
+		{
+			// mov eax, 5
+			AST::IntNode* asIntNode = (AST::IntNode*)upperBound;
+
+			const std::string& toReg = GetReg(RG::RAX, AST::IntNode::s_defaultIntLiteralType);
+
+			std::string output = "\nmov " + toReg + ", " + std::to_string(asIntNode->Get()) + "\n";
+			code += output;
+
+			break;
+		}
+		case Node_k::SymNode:
+		{
+			// mov eax, DWORD PTR upperBound[rsp]
+			AST::SymNode* asSymNode = (AST::SymNode*)upperBound;
+			SymTabEntry* entry = asSymNode->GetSymTabEntry();
+			const PrimitiveType symType = entry->asVar.type;
+
+			const std::string bringInSymString = GetWordKindFromType(entry->asVar.type) + " " + std::to_string(entry->asVar.adress) + "[rsp]";
+			const auto [readReg, writeReg, movToRaxOp] = GetTypeDependentInstructions(
+				RG::RAX,
+				RG::RAX,
+				symType,
+				symType,
+				symType
+			);
+
+			std::string output = movToRaxOp + readReg + ", " + bringInSymString + "\n";
+			code += output;
+
+			break;
+		}
+		}
+		
+		// Now it's time to compare with the iter variable and jump if greater than or equal to.
+		const std::string iterVarString = GetWordKindFromType(iterVarType) + " " + std::to_string(iterVarAddress) + "[rsp]";
+		code += "cmp " + iterVarString + ", " + GetReg(RG::RAX, iterVarType) +
+						"\njge SHORT " + labelToJumpTo + "\n";
+	}
+
+	inline static void GenForLoopHeadCode(
+		std::string& code,
+		AST::ForLoopHeadNode* node,
+		TempVar& iterVar,
+		const PrimitiveType iterVarType,
+		const std::string& headLabel,
+		const std::string& bodyLabel,
+		const std::string& exitLabel
+	)
+	{
+		const ui32 actualAddress = CurrentFunctionMetaData::varsStackSectionSize + iterVar.adress;
+		GenAssignmentToStackMem(code, node->GetLowerBound(), actualAddress, iterVarType);
+	
+		// Now we must generate the jump instruction.
+		code += "jmp SHORT " + bodyLabel + "\n";
+
+		// And then for the actual head, where we increment the iter variable.
+
+		const std::string iterVarAssignmentString = GetWordKindFromType(iterVarType) + " " + std::to_string(actualAddress) + "[rsp]";
+
+		const std::string& toFromReg = GetReg(RG::RAX, iterVarType);
+
+		code += headLabel + ":\n" +
+						"\nmov " + toFromReg + ", " + iterVarAssignmentString +
+						"\ninc " + toFromReg +
+						"\nmov " + iterVarAssignmentString + ", " + toFromReg + "\n";
+
+
+		// Now we can generate code for the comparison between iterVar and the upper bound.
+		GenForLoopHeadComparison(code, node->GetUpperBound(), exitLabel, actualAddress, iterVarType);
+	}
+
+	void GenerateFunctionBody(std::string& code, AST::Node* node, i32* const largestTempAllocation);
+
+	inline static void GenForLoopCode(std::string& code, AST::ForLoopNode* node, i32* const largestTempAllocation)
+	{
+		// The iter var(typically i in C/C++ for loops) will be maintained as a temporary variable.
+		TempVar iterVar = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+		const PrimitiveType iterVarType = PrimitiveType::ui64;
+		CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(iterVarType));
+		
+		// This variable will not take functions into account, so if it encounters 2 loops in function Foo,
+		// and then a loop in main, the main loop will not start over numbered as 0.
+		static ui32 s_forLoopsEncountered = 0;
+		std::string forLoopNumStr = std::to_string(s_forLoopsEncountered);
+		std::string headLabel = "LH" + forLoopNumStr + "@" + CurrentFunctionMetaData::funcName;
+		std::string bodyLabel = "LB" + forLoopNumStr + "@" + CurrentFunctionMetaData::funcName;
+		std::string exitLabel = "LE" + forLoopNumStr + "@" + CurrentFunctionMetaData::funcName;
+		s_forLoopsEncountered++;
+
+		// Fix the head (iter var init + comparison)
+		GenForLoopHeadCode(code, (AST::ForLoopHeadNode*)node->GetHead(), iterVar, iterVarType, headLabel, bodyLabel, exitLabel);
+
+		// Generate body
+		code += bodyLabel + ":\n";
+		GenerateFunctionBody(code, node->GetBody(), largestTempAllocation);
+
+		// Jump back to head after executing an iteration.
+		code += "jmp SHORT " + headLabel + "\n";
+
+		// Place the exit label.
+		code += exitLabel + ":\n";
 	}
 
 	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node)
@@ -876,6 +1065,16 @@ namespace Body
 				
 				PushArgsIntoRegs(code, asFunctionCallNode);
 				code += "call " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
+
+				break;
+			}
+			case Node_k::ForLoopNode:
+			{
+				AST::ForLoopNode* asForLoopNode = (AST::ForLoopNode*)node;
+
+				GenForLoopCode(code, asForLoopNode, largestTempAllocation);
+
+				break;
 			}
 		}
 	
@@ -957,7 +1156,8 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 		if (asFunctionNode->GetName() == std::wstring(WideMainFunctionName))
 		{
 			// Stick the main function name (in BCL) in there as a comment.
-			mangledFuncName = "; main (In BCL: " + std::string(NarrowMainFunctionName) + ")\nmain";
+			//mangledFuncName = "; main (In BCL: " + std::string(NarrowMainFunctionName) + ")\nmain";
+			mangledFuncName = "main";
 		}
 		else
 		{
@@ -967,6 +1167,7 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 		}
 		CurrentFunctionMetaData::funcName = mangledFuncName;
 		CurrentFunctionMetaData::retType = asFunctionNode->GetRetType();
+		CurrentFunctionMetaData::currentFunction = asFunctionNode;
 
 		// We need to get the biggest size the stack will ever grow to so we can enforce our allocation policy.
 		// Without this we'd allocate more and more stack size for each expression evaluation, even though temporaries should start back at 0 when evaluating a new expression.
