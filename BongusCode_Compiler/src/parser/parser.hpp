@@ -837,7 +837,7 @@ namespace yy {
     /// Constants.
     enum
     {
-      yylast_ = 103,     ///< Last index in yytable_.
+      yylast_ = 112,     ///< Last index in yytable_.
       yynnts_ = 30,  ///< Number of nonterminal symbols.
       yyfinal_ = 15 ///< Termination state number.
     };

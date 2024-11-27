@@ -239,6 +239,7 @@ namespace AST
 		virtual ~ArgNode() override = default;
 		inline const std::wstring& GetName(void) const { return c; }
 		inline const PrimitiveType GetType(void) const { return type; }
+		inline const PrimitiveType GetPointeeType(void) const { return pointeeType; }
 		friend Node* MakeArgNode(std::wstring*, const PrimitiveType, const PrimitiveType);
 
 	private:
