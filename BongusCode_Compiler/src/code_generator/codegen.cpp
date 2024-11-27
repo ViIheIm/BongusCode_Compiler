@@ -422,6 +422,65 @@ namespace Body
 		return std::tuple(readRegStr, writeRegStr, movToRaxOpStr);
 	}
 
+	inline static const PrimitiveType GetPointeeTypeFromDerefNode(AST::DerefNode* derefNode)
+	{
+		/*
+				Hunt through the subexpr until we find a pointer node.
+				Most sane dereference operations evolve from a single pointer, e.g.
+					¤(pointer + 1) = 200
+				and not typically
+					¤(pointer + **another pointer**) = 200
+
+				in fact(just checked this in compiler explorer), adding a pointer to another pointer in C++ raises an error,
+				so we can safely look for only 1 pointer in the subexpression, and take it's pointeeType.
+
+				There's a safety check in the semantics pass which checks for more than 1 pointer in a subexpression,
+				which raises an error if several are found, so we can happily pick the first pointee type here and call it a day.
+			*/
+
+		PrimitiveType pointeeType = PrimitiveType::invalid;
+
+		for (AST::Node* symNode : AST::GetAllChildNodesOfType(derefNode, Node_k::SymNode))
+		{
+			AST::SymNode* asSymNode = (AST::SymNode*)symNode;
+			SymTabEntry* entry = asSymNode->GetSymTabEntry();
+
+			if (entry->asVar.type == PrimitiveType::pointer)
+			{
+				// Find first pointer, get it's pointee-type and break.
+				pointeeType = entry->asVar.pointeeType;
+				break;
+			}
+		}
+
+		if (pointeeType == PrimitiveType::invalid)
+		{
+			wprintf(L"ERROR: couldn't find pointee type in " __FUNCDNAME__ "\n");
+			Exit(ErrCodes::internal_compiler_error);
+		}
+
+		return pointeeType;
+	}
+
+	inline static const std::string GenDerefCode(const PrimitiveType pointeeType)
+	{
+			std::string readReg(GetReg(RG::RAX, pointeeType));
+			std::string movToRaxOp("mov ");
+			std::string wordKind = GetWordKindFromType(pointeeType);
+			if (pointeeType == PrimitiveType::ui16 || pointeeType == PrimitiveType::i16)
+			{
+				movToRaxOp = "movzx ";
+				readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
+			}
+			
+			// By this point, the entire expression should be generated and held in rax.
+			// Dereference rax and store it out in _t0.
+			std::string output = "\n" + movToRaxOp + readReg + ", " + wordKind + "[RAX]\n";
+
+			return output;
+	}
+
+
 	static void GenOpNodeCode(std::string& code, AST::Node* node, const TempVar& t0, const PrimitiveType exprType)
 	{
 		visitedNodes.push_back(node);
@@ -631,32 +690,9 @@ namespace Body
 			AST::DerefNode* asDerefNode = (AST::DerefNode*)node;
 			const PrimitiveType pointerType = PrimitiveType::pointer;
 			
-			/*
-				Hunt through the subexpr until we find a pointer node.
-				Most sane dereference operations evolve from a single pointer, e.g.
-					¤(pointer + 1) = 200
-				and not typically
-					¤(pointer + **another pointer**) = 200
+			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
 
-				in fact(just checked this in compiler explorer), adding a pointer to another pointer in C++ raises an error,
-				so we can safely look for only 1 pointer in the subexpression, and take it's pointeeType.
-				
-				There's a safety check in the semantics pass which checks for more than 1 pointer in a subexpression,
-				which raises an error if several are found, so we can happily pick the first pointee type here and call it a day.
-			*/
-			PrimitiveType pointeeType = AST::IntNode::s_defaultIntLiteralType;
-			for (AST::Node* symNode : AST::GetAllChildNodesOfType(asDerefNode, Node_k::SymNode))
-			{
-				AST::SymNode* asSymNode = (AST::SymNode*)symNode;
-				SymTabEntry* entry = asSymNode->GetSymTabEntry();
-
-				if (entry->asVar.type == PrimitiveType::pointer)
-				{
-					// Find first pointer, get it's pointee-type and break.
-					pointeeType = entry->asVar.pointeeType;
-					break;
-				}
-			}
+			PrimitiveType pointeeType = GetPointeeTypeFromDerefNode(asDerefNode);
 
 			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
 			GenOpNodeCode(code, asDerefNode->GetExpr(), t1, pointerType);
@@ -666,19 +702,23 @@ namespace Body
 				movzx   eax, WORD PTR[rax]
 			*/
 
-			std::string readReg(GetReg(RG::RAX, pointeeType));
-			std::string movToRaxOp("mov ");
-			std::string wordKind = GetWordKindFromType(pointeeType);
-			if (pointeeType == PrimitiveType::ui16 || pointeeType == PrimitiveType::i16)
-			{
-				movToRaxOp = "movzx ";
-				readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
-			}
+			//std::string readReg(GetReg(RG::RAX, pointeeType));
+			//std::string movToRaxOp("mov ");
+			//std::string wordKind = GetWordKindFromType(pointeeType);
+			//if (pointeeType == PrimitiveType::ui16 || pointeeType == PrimitiveType::i16)
+			//{
+			//	movToRaxOp = "movzx ";
+			//	readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
+			//}
+			//
+			//// By this point, the entire expression should be generated and held in rax.
+			//// Dereference rax and store it out in _t0.
+			//std::string output = "\n; _t0 = Deref operation of previous expr(rax).\n" +
+			//	movToRaxOp + readReg + ", " + wordKind + "[RAX]\n";
+			std::string output = GenDerefCode(pointeeType);
 
-			// By this point, the entire expression should be generated and held in rax.
-			// Dereference rax and store it out in _t0.
-			std::string output = "\n; _t0 = Deref operation of previous expr(rax).\n" +
-				movToRaxOp + readReg + ", " + wordKind + "[RAX]\n";
+			output += "; Move out to " + t1.name +
+				"\nmov " + RefTempVar(t1.adress, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
 
 			code += output;
 
@@ -816,7 +856,7 @@ namespace Body
 		// The iter var(typically i in C/C++ for loops) will be maintained as a temporary variable.
 		TempVar iterVar = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
 		const PrimitiveType iterVarType = PrimitiveType::ui64;
-		CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(iterVarType));
+		//CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(iterVarType));
 		
 		// This variable will not take functions into account, so if it encounters 2 loops in function Foo,
 		// and then a loop in main, the main loop will not start over numbered as 0.
@@ -987,12 +1027,15 @@ namespace Body
 				i32 stackLocation = -1;
 				PrimitiveType exprType = PrimitiveType::invalid;
 
-				if (asAssNode->GetVar()->GetNodeKind() == Node_k::SymNode)
-				{
-					AST::SymNode* var = (AST::SymNode*)asAssNode->GetVar();
+				AST::Node* assNodeVar = asAssNode->GetVar();
+				const Node_k assNodeVarNodeKind = assNodeVar->GetNodeKind();
 
-					//std::wstring key = g_symTable.ComposeKey(var->GetName(), 1); // TODO: Restructure symbol table.
-					//SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+				switch (assNodeVarNodeKind)
+				{
+				case Node_k::SymNode:
+				{
+					AST::SymNode* var = (AST::SymNode*)assNodeVar;
+
 					SymTabEntry* entry = var->GetSymTabEntry();
 
 					if (entry == nullptr)
@@ -1004,30 +1047,64 @@ namespace Body
 
 					stackLocation = entry->asVar.adress;
 					exprType = entry->asVar.type;
+
+					break;
+				}
+				case Node_k::DerefNode:
+				{
+					AST::DerefNode* derefOp = (AST::DerefNode*)assNodeVar;
+
+					exprType = GetPointeeTypeFromDerefNode(derefOp);
+
+					break;
+				}
 				}
 
 				// Generate operation code. Remember that the temporaries stack section needs to be reset!
 				TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
-				// The type and size all temporaries involved in this expression will inherit depends on the type we're assigning to, effectively
-				// handling truncation immediately.
 				GenOpNodeCode(code, asAssNode->GetExpr(), t0, exprType);
 
-				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
-				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
-				// Enforce allocation policy(doing the aforementioned resetting).
-				CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+				std::string output;
+
+				switch (assNodeVarNodeKind)
+				{
+				case Node_k::SymNode:
+				{
+					output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)" +
+						"\nmov " + RefLocalVar(stackLocation, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
+
+					break;
+				}
+
+				case Node_k::DerefNode:
+				{
+					const PrimitiveType pointeeType = exprType;
+
+					/*
+						mov RAX, ptr
+						mov [RAX], t0(holds expr)
+					*/
+
+					AST::DerefNode* asDerefNode = (AST::DerefNode*)assNodeVar;
+					const PrimitiveType pointerType = PrimitiveType::pointer;
+					
+					TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+					GenOpNodeCode(code, asDerefNode->GetExpr(), t1, pointerType);
+
+					output = "; Copy result to rcx, as a middle-man\n" \
+						"mov rcx, " + RefTempVar(t0.adress, pointerType) +
+						"\nmov [RAX], RCX\n";
 
 
-
-
-				// Store result (held in rax and on the temporaries-stack) in var.
-				// TODO: Maybe integrate function name mangling for variable names aswell, so we can write out the variable name instead of stack location.
-				std::string output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)" +
-									 "\nmov " + RefLocalVar(stackLocation, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
+					break;
+				}
+				}
 
 				code += output;
-				// std::cerr << output;
 
+				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
+				CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+				
 				break;
 			}
 			case Node_k::ReturnNode:
@@ -1047,12 +1124,7 @@ namespace Body
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
 				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
 
-				// Add some padding.
 				code += "\n\n";
-
-				// TODO: We're no longer generating the epilogue when we return. Instead, if we find a return statement(in an if-statement), stick the result in RAX and GOTO(!)
-				// the epilogue of the function, skipping all the other code in between.
-				// On the other hand, if we find a lone return statement that obscures code after it, we just raise an error.
 
 				break;
 			}
@@ -1123,8 +1195,6 @@ namespace Boilerplate
 
 void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 {
-	// Start by generating the boilerplate skeleton once, then generate function code for each function node, then finish by generating the boilerplate
-	// at the bottom of the ASM file.
 	// Note narrowing to narrow string from wide string.
 	std::string boilerplateHeader, boilerplateFooter;
 
