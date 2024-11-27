@@ -381,6 +381,11 @@ namespace Tools
 		}
 	}
 
+	inline static i32 GetAdressOfTemporary(const TempVar& t)
+	{
+		return CurrentFunctionMetaData::varsStackSectionSize + t.adress;
+	}
+
 	inline static std::string RefTempVar(const i32 offset, const PrimitiveType type)
 	{
 		// EXAMPLE:
@@ -413,29 +418,29 @@ namespace Tools
 		return std::tuple(movVariant, RAXVariant, sizeVariant);
 	}
 
-	std::string FetchIntoRAX(const TempVar& tSource, const PrimitiveType tSourceType)
+	std::string FetchIntoRAX(const i32 sourceAdress, const PrimitiveType sourceType)
 	{
-		const auto [movVariant, RAXVariant, sizeVariant] = GetFetchInstructionsForType(tSourceType);
+		const auto [movVariant, RAXVariant, sizeVariant] = GetFetchInstructionsForType(sourceType);
 
-		std::string result = movVariant + " " + RAXVariant + ", " + RefTempVar(tSource.adress, tSourceType);
+		std::string result = movVariant + " " + RAXVariant + ", " + sizeVariant + " " + std::to_string(sourceAdress) + "[rsp]";
 
 		return result;
 	}
 
-	std::string OperateOnRAX(const std::string& op, const TempVar& operand, const PrimitiveType operandType)
+	std::string OperateOnRAX(const std::string& op, const i32 operandAdress, const PrimitiveType operandType)
 	{
 		const auto [movVariant, RAXVariant, sizeVariant] = GetFetchInstructionsForType(operandType);
 
-		std::string result = op + " " + RAXVariant + ", " + RefTempVar(operand.adress, operandType);
+		std::string result = op + " " + RAXVariant + ", " + sizeVariant + " " + std::to_string(operandAdress) + "[rsp]";
 
 		return result;
 	}
 
-	std::string PushRAXIntoMem(const TempVar& tDest, const PrimitiveType tDestType)
+	std::string PushRAXIntoMem(const i32 destAdress, const PrimitiveType destType)
 	{
-		const auto [movVariant, RAXVariant, sizeVariant] = GetFetchInstructionsForType(tDestType);
+		const auto [movVariant, RAXVariant, sizeVariant] = GetFetchInstructionsForType(destType);
 
-		std::string result = movVariant + " " + RefTempVar(tDest.adress, tDestType) + ", " + RAXVariant;
+		std::string result = movVariant + " " + sizeVariant + " " + std::to_string(destAdress) + "[rsp]" + ", " + RAXVariant;
 
 		return result;
 	}
@@ -551,33 +556,32 @@ namespace Body
 	
 			const std::string& RAX = GetReg(RG::RAX, exprType);
 
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
+			const i32 t1ActualAdress = GetAdressOfTemporary(t1);
+
 			if (opString == "+")
 			{
 				std::string output = "\n; " + t0.name + " += " + t1.name + "\n" +
-														 FetchIntoRAX(t0, exprType) + "\n" +
-														 OperateOnRAX("add", t1, exprType) + "\n" +
-														 PushRAXIntoMem(t0, exprType);
+														 FetchIntoRAX(t0ActualAdress, exprType) + "\n" +
+														 OperateOnRAX("add", t1ActualAdress, exprType) + "\n" +
+														 PushRAXIntoMem(t0ActualAdress, exprType);
 				code += output;
 			}
 			if (opString == "-")
 			{
 				std::string output = "\n; " + t0.name + " -= " + t1.name + "\n" +
-														 FetchIntoRAX(t0, exprType) + "\n" +
-														 OperateOnRAX("sub", t1, exprType) + "\n" +
-														 PushRAXIntoMem(t0, exprType);
+														 FetchIntoRAX(t0ActualAdress, exprType) + "\n" +
+														 OperateOnRAX("sub", t1ActualAdress, exprType) + "\n" +
+														 PushRAXIntoMem(t0ActualAdress, exprType);
 
 				code += output;
 			}
 			else if (opString == "*")
 			{
-				//std::string output = "\n; " + t0.name + " *= " + t1.name +
-				//					 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
-				//					 "\nimul " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
-				//					 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				std::string output = "\n; " + t0.name + " *= " + t1.name + "\n" +
-														 FetchIntoRAX(t0, exprType) + "\n" +
-														 OperateOnRAX("imul", t1, exprType) + "\n" +
-														 PushRAXIntoMem(t0, exprType);
+														 FetchIntoRAX(t0ActualAdress, exprType) + "\n" +
+														 OperateOnRAX("imul", t1ActualAdress, exprType) + "\n" +
+														 PushRAXIntoMem(t0ActualAdress, exprType);
 
 				code += output;
 			}
