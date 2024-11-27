@@ -6,6 +6,7 @@
 #include "../CStrLib.h"
 #include "../Utils.h"
 #include <cassert>
+#include <iostream>
 
 /*
 	Name mangling in bonguscode is like how most C-compilers mangle their names.
@@ -346,9 +347,7 @@ bool FindNodeInVisitedNodes(AST::Node* node)
 	return false;
 }
 
-// TODO: Only necessary for debug printing, remove later.
-#include <iostream>
-namespace Body
+namespace Tools
 {
 	inline static std::string GetWordKindFromType(const PrimitiveType type)
 	{
@@ -396,6 +395,55 @@ namespace Body
 		return std::string(wordKind + " " + std::to_string(offset) + "[rsp]");
 	}
 
+	// string1 -> mov variant
+	// string2 -> RAX variant
+	// string3 -> size variant (WORD PTR / DWORD PTR / QWORD PTR)
+	std::tuple<std::string, std::string, std::string> GetFetchInstructionsForType(const PrimitiveType type)
+	{
+		std::string movVariant("mov");
+		std::string RAXVariant = GetReg(RG::RAX, type);
+		std::string sizeVariant = GetWordKindFromType(type);
+
+		if (type == PrimitiveType::i16 || type == PrimitiveType::ui16)
+		{
+			movVariant = "movzx ";
+			RAXVariant = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
+		}
+
+		return std::tuple(movVariant, RAXVariant, sizeVariant);
+	}
+
+	std::string FetchIntoRAX(const TempVar& tSource, const PrimitiveType tSourceType)
+	{
+		const auto [movVariant, RAXVariant, sizeVariant] = GetFetchInstructionsForType(tSourceType);
+
+		std::string result = movVariant + " " + RAXVariant + ", " + RefTempVar(tSource.adress, tSourceType);
+
+		return result;
+	}
+
+	std::string OperateOnRAX(const std::string& op, const TempVar& operand, const PrimitiveType operandType)
+	{
+		const auto [movVariant, RAXVariant, sizeVariant] = GetFetchInstructionsForType(operandType);
+
+		std::string result = op + " " + RAXVariant + ", " + RefTempVar(operand.adress, operandType);
+
+		return result;
+	}
+
+	std::string PushRAXIntoMem(const TempVar& tDest, const PrimitiveType tDestType)
+	{
+		const auto [movVariant, RAXVariant, sizeVariant] = GetFetchInstructionsForType(tDestType);
+
+		std::string result = movVariant + " " + RefTempVar(tDest.adress, tDestType) + ", " + RAXVariant;
+
+		return result;
+	}
+}
+using namespace Tools;
+
+namespace Body
+{
 	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node);
 	
 	// Returns a tuple consisting of <read register, write register, mov type>
@@ -505,30 +553,33 @@ namespace Body
 
 			if (opString == "+")
 			{
-				std::string output = "\n; " + t0.name + " += " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
-									 "\nadd " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+				std::string output = "\n; " + t0.name + " += " + t1.name + "\n" +
+														 FetchIntoRAX(t0, exprType) + "\n" +
+														 OperateOnRAX("add", t1, exprType) + "\n" +
+														 PushRAXIntoMem(t0, exprType);
 				code += output;
-				// std::cerr << output;
 			}
 			if (opString == "-")
 			{
-				std::string output = "\n; " + t0.name + " -= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
-									 "\nsub " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+				std::string output = "\n; " + t0.name + " -= " + t1.name + "\n" +
+														 FetchIntoRAX(t0, exprType) + "\n" +
+														 OperateOnRAX("sub", t1, exprType) + "\n" +
+														 PushRAXIntoMem(t0, exprType);
+
 				code += output;
-				// std::cerr << output;
 			}
 			else if (opString == "*")
 			{
-				std::string output = "\n; " + t0.name + " *= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
-									 "\nimul " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+				//std::string output = "\n; " + t0.name + " *= " + t1.name +
+				//					 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
+				//					 "\nimul " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
+				//					 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+				std::string output = "\n; " + t0.name + " *= " + t1.name + "\n" +
+														 FetchIntoRAX(t0, exprType) + "\n" +
+														 OperateOnRAX("imul", t1, exprType) + "\n" +
+														 PushRAXIntoMem(t0, exprType);
+
 				code += output;
-				// std::cerr << output;
 			}
 			else if (opString == "/")
 			{
@@ -540,15 +591,14 @@ namespace Body
 				const std::string& RDX = GetReg(RG::RDX, exprType);
 
 				std::string output = "\n; " + t0.name + " /= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
-									 "\nmov " + RBX + ", " + RefTempVar(t1.adress, exprType) +		// Store divisor in rbx
-									 "\nxor " + RDX + ", " + RDX +									// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
-									 "\ndiv " + RBX +												// Perform operation in ebx
-									 "\nmov " + RBX + ", 3405691582 ; 0xCAFEBABE" +					// Store sentinel value CAFEBABE in rbx in case of bugs.
-									 "\nmov " + RDX + ", 4276993775 ; 0xFEEDBEEF" +					// Do the same for rdx with FEEDBEEF since it was also used.
-									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+														 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +				// Store _tfirst in eax
+														 "\nmov " + RBX + ", " + RefTempVar(t1.adress, exprType) +				// Store divisor in rbx
+														 "\nxor " + RDX + ", " + RDX +																		// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
+														 "\ndiv " + RBX +																									// Perform operation in ebx
+														 "\nmov " + RBX + ", 3405691582 ; 0xCAFEBABE" +										// Store sentinel value CAFEBABE in rbx in case of bugs.
+														 "\nmov " + RDX + ", 4276993775 ; 0xFEEDBEEF" +										// Do the same for rdx with FEEDBEEF since it was also used.
+														 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
 				code += output;
-				// std::cerr << output;
 			}
 	
 			break;
