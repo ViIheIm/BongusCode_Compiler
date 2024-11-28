@@ -716,12 +716,11 @@ namespace Body
 
 			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
 
-			std::string readReg(GetReg(RG::RAX, addrOfNodeExprType));
-			const std::string& writeReg = GetReg(RG::RAX, exprType);
-
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 			std::string output = "\n; " + t0.name + " = (addr of local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
-				"lea " + readReg + ", " + RefLocalVar(entry->asVar.adress, addrOfNodeExprType) +
-				"\nmov " + RefTempVar(t0.adress, addrOfNodeExprType) + ", " + writeReg + "\n";
+													 OperateOnReg(RG::RAX, "lea", entry->asVar.adress, addrOfNodeExprType) + "\n" +
+													 PushRegIntoMem(RG::RAX, t0ActualAdress, addrOfNodeExprType);
+
 
 			code += output;
 
@@ -739,28 +738,12 @@ namespace Body
 			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
 			GenOpNodeCode(code, asDerefNode->GetExpr(), t1, pointerType);
 
-			/*
-				mov     rax, QWORD PTR b$[rsp]
-				movzx   eax, WORD PTR[rax]
-			*/
-
-			//std::string readReg(GetReg(RG::RAX, pointeeType));
-			//std::string movToRaxOp("mov ");
-			//std::string wordKind = GetWordKindFromType(pointeeType);
-			//if (pointeeType == PrimitiveType::ui16 || pointeeType == PrimitiveType::i16)
-			//{
-			//	movToRaxOp = "movzx ";
-			//	readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
-			//}
-			//
-			//// By this point, the entire expression should be generated and held in rax.
-			//// Dereference rax and store it out in _t0.
-			//std::string output = "\n; _t0 = Deref operation of previous expr(rax).\n" +
-			//	movToRaxOp + readReg + ", " + wordKind + "[RAX]\n";
 			std::string output = GenDerefCode(pointeeType);
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
+			
 
-			output += "; Move out to " + t1.name +
-				"\nmov " + RefTempVar(t1.adress, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
+			output += "\n; Move out to " + t0.name + "\n" +
+								PushRegIntoMem(RG::RAX, t0ActualAdress, exprType);
 
 			code += output;
 
