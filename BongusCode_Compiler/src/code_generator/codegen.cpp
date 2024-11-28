@@ -403,44 +403,44 @@ namespace Tools
 	// string1 -> mov variant
 	// string2 -> RAX variant
 	// string3 -> size variant (WORD PTR / DWORD PTR / QWORD PTR)
-	std::tuple<std::string, std::string, std::string> GetFetchInstructionsForType(const PrimitiveType type)
+	std::tuple<std::string, std::string, std::string> GetFetchInstructionsForType(const RG reg, const PrimitiveType type)
 	{
 		std::string movVariant("mov");
-		std::string RAXVariant = GetReg(RG::RAX, type);
+		std::string RegVariant = GetReg(reg, type);
 		std::string sizeVariant = GetWordKindFromType(type);
 
 		if (type == PrimitiveType::i16 || type == PrimitiveType::ui16)
 		{
 			movVariant = "movzx ";
-			RAXVariant = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
+			RegVariant = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
 		}
 
-		return std::tuple(movVariant, RAXVariant, sizeVariant);
+		return std::tuple(movVariant, RegVariant, sizeVariant);
 	}
 
-	std::string FetchIntoRAX(const i32 sourceAdress, const PrimitiveType sourceType)
+	std::string FetchIntoReg(const RG reg, const i32 sourceAdress, const PrimitiveType sourceType)
 	{
-		const auto [movVariant, RAXVariant, sizeVariant] = GetFetchInstructionsForType(sourceType);
+		const auto [movVariant, RegVariant, sizeVariant] = GetFetchInstructionsForType(reg, sourceType);
 
-		std::string result = movVariant + " " + RAXVariant + ", " + sizeVariant + " " + std::to_string(sourceAdress) + "[rsp]";
+		std::string result = movVariant + " " + RegVariant + ", " + sizeVariant + " " + std::to_string(sourceAdress) + "[rsp]";
 
 		return result;
 	}
 
-	std::string OperateOnRAX(const std::string& op, const i32 operandAdress, const PrimitiveType operandType)
+	std::string OperateOnReg(const RG reg, const std::string& op, const i32 operandAdress, const PrimitiveType operandType)
 	{
-		const auto [movVariant, RAXVariant, sizeVariant] = GetFetchInstructionsForType(operandType);
+		const auto [movVariant, RegVariant, sizeVariant] = GetFetchInstructionsForType(reg, operandType);
 
-		std::string result = op + " " + RAXVariant + ", " + sizeVariant + " " + std::to_string(operandAdress) + "[rsp]";
+		std::string result = op + " " + RegVariant + ", " + sizeVariant + " " + std::to_string(operandAdress) + "[rsp]";
 
 		return result;
 	}
 
-	std::string PushRAXIntoMem(const i32 destAdress, const PrimitiveType destType)
+	std::string PushRegIntoMem(const RG reg, const i32 destAdress, const PrimitiveType destType)
 	{
-		const auto [movVariant, RAXVariant, sizeVariant] = GetFetchInstructionsForType(destType);
+		const auto [movVariant, RegVariant, sizeVariant] = GetFetchInstructionsForType(reg, destType);
 
-		std::string result = movVariant + " " + sizeVariant + " " + std::to_string(destAdress) + "[rsp]" + ", " + RAXVariant;
+		std::string result = movVariant + " " + sizeVariant + " " + std::to_string(destAdress) + "[rsp]" + ", " + RegVariant;
 
 		return result;
 	}
@@ -562,26 +562,26 @@ namespace Body
 			if (opString == "+")
 			{
 				std::string output = "\n; " + t0.name + " += " + t1.name + "\n" +
-														 FetchIntoRAX(t0ActualAdress, exprType) + "\n" +
-														 OperateOnRAX("add", t1ActualAdress, exprType) + "\n" +
-														 PushRAXIntoMem(t0ActualAdress, exprType);
+														 FetchIntoReg(RG::RAX, t0ActualAdress, exprType) + "\n" +
+														 OperateOnReg(RG::RAX, "add", t1ActualAdress, exprType) + "\n" +
+														 PushRegIntoMem(RG::RAX, t0ActualAdress, exprType);
 				code += output;
 			}
 			if (opString == "-")
 			{
 				std::string output = "\n; " + t0.name + " -= " + t1.name + "\n" +
-														 FetchIntoRAX(t0ActualAdress, exprType) + "\n" +
-														 OperateOnRAX("sub", t1ActualAdress, exprType) + "\n" +
-														 PushRAXIntoMem(t0ActualAdress, exprType);
+														 FetchIntoReg(RG::RAX, t0ActualAdress, exprType) + "\n" +
+														 OperateOnReg(RG::RAX, "sub", t1ActualAdress, exprType) + "\n" +
+														 PushRegIntoMem(RG::RAX, t0ActualAdress, exprType);
 
 				code += output;
 			}
 			else if (opString == "*")
 			{
 				std::string output = "\n; " + t0.name + " *= " + t1.name + "\n" +
-														 FetchIntoRAX(t0ActualAdress, exprType) + "\n" +
-														 OperateOnRAX("imul", t1ActualAdress, exprType) + "\n" +
-														 PushRAXIntoMem(t0ActualAdress, exprType);
+														 FetchIntoReg(RG::RAX, t0ActualAdress, exprType) + "\n" +
+														 OperateOnReg(RG::RAX, "imul", t1ActualAdress, exprType) + "\n" +
+														 PushRegIntoMem(RG::RAX, t0ActualAdress, exprType);
 
 				code += output;
 			}
