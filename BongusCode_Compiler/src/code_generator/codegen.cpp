@@ -427,6 +427,15 @@ namespace Tools
 		return result;
 	}
 
+	std::string FetchImmediateIntoReg(const RG reg, const std::string& immediate)
+	{
+		const auto [movVariant, RegVariant, sizeVariant] = GetFetchInstructionsForType(reg, AST::IntNode::s_defaultIntLiteralType);
+
+		std::string result = movVariant + " " + RegVariant + ", " + immediate;
+
+		return result;
+	}
+
 	std::string OperateOnReg(const RG reg, const std::string& op, const i32 operandAdress, const PrimitiveType operandType)
 	{
 		const auto [movVariant, RegVariant, sizeVariant] = GetFetchInstructionsForType(reg, operandType);
@@ -594,14 +603,14 @@ namespace Body
 				const std::string& RBX = GetReg(RG::RBX, exprType);
 				const std::string& RDX = GetReg(RG::RDX, exprType);
 
-				std::string output = "\n; " + t0.name + " /= " + t1.name +
-														 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +				// Store _tfirst in eax
-														 "\nmov " + RBX + ", " + RefTempVar(t1.adress, exprType) +				// Store divisor in rbx
-														 "\nxor " + RDX + ", " + RDX +																		// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
-														 "\ndiv " + RBX +																									// Perform operation in ebx
-														 "\nmov " + RBX + ", 3405691582 ; 0xCAFEBABE" +										// Store sentinel value CAFEBABE in rbx in case of bugs.
-														 "\nmov " + RDX + ", 4276993775 ; 0xFEEDBEEF" +										// Do the same for rdx with FEEDBEEF since it was also used.
-														 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+				std::string output = "\n; " + t0.name + " /= " + t1.name + "\n" +
+														 FetchIntoReg(RG::RAX, t0ActualAdress, exprType) + "\n" +								// Store _tfirst in eax
+														 FetchIntoReg(RG::RBX, t1ActualAdress, exprType) + "\n" +								//"\nmov " + RBX + ", " + RefTempVar(t1.adress, exprType) +				// Store divisor in rbx
+														 "xor " + RDX + ", " + RDX + "\n" +																			// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
+														 "div " + RBX + "\n" +																									// Perform operation in ebx
+														 FetchImmediateIntoReg(RG::RBX, "3405691582 ; 0xCAFEBABE") + "\n" +			// Store sentinel value CAFEBABE in rbx in case of bugs.
+														 FetchImmediateIntoReg(RG::RDX, "4276993775 ; 0xFEEDBEEF") + "\n" +			// Do the same for rdx with FEEDBEEF since it was also used.
+														 PushRegIntoMem(RG::RAX, t0ActualAdress, exprType);											// Store result in _tfirst on stack
 				code += output;
 			}
 	
