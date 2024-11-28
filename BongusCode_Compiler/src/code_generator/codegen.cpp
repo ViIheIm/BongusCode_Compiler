@@ -767,7 +767,7 @@ namespace Body
 			const std::string& toFromReg = GetReg(RG::RAX, assigneeType);
 
 			std::string output = "\nmov " + toFromReg + ", " + std::to_string(asIntNode->Get()) +
-							"\nmov " + assignmentString + ", " + toFromReg + "\n";
+							"\nmov " + assignmentString + ", " + toFromReg;
 
 			code += output;
 
@@ -787,8 +787,8 @@ namespace Body
 				symType
 			);
 
-			std::string output = movToRaxOp + readReg + ", " + RefLocalVar(entry->asVar.adress, symType) +
-													 "\nmov " + assignmentString + ", " + writeReg + "\n";
+			std::string output = "\n" + movToRaxOp + readReg + ", " + RefLocalVar(entry->asVar.adress, symType) +
+													 "\nmov " + assignmentString + ", " + writeReg;
 
 			code += output;
 
@@ -808,7 +808,7 @@ namespace Body
 
 			const std::string& toReg = GetReg(RG::RAX, AST::IntNode::s_defaultIntLiteralType);
 
-			std::string output = "\nmov " + toReg + ", " + std::to_string(asIntNode->Get()) + "\n";
+			std::string output = "\nmov " + toReg + ", " + std::to_string(asIntNode->Get());
 			code += output;
 
 			break;
@@ -829,7 +829,7 @@ namespace Body
 				symType
 			);
 
-			std::string output = movToRaxOp + readReg + ", " + bringInSymString + "\n";
+			std::string output = "\n" + movToRaxOp + readReg + ", " + bringInSymString + "\n";
 			code += output;
 
 			break;
@@ -838,7 +838,7 @@ namespace Body
 		
 		// Now it's time to compare with the iter variable and jump if greater than or equal to.
 		const std::string iterVarString = GetWordKindFromType(iterVarType) + " " + std::to_string(iterVarAddress) + "[rsp]";
-		code += "cmp " + iterVarString + ", " + GetReg(RG::RAX, iterVarType) +
+		code += "\ncmp " + iterVarString + ", " + GetReg(RG::RAX, iterVarType) +
 						"\njge SHORT " + labelToJumpTo + "\n";
 	}
 
@@ -856,7 +856,7 @@ namespace Body
 		GenAssignmentToStackMem(code, node->GetLowerBound(), actualAddress, iterVarType);
 	
 		// Now we must generate the jump instruction.
-		code += "jmp SHORT " + bodyLabel + "\n";
+		code += "\njmp SHORT " + bodyLabel + "\n";
 
 		// And then for the actual head, where we increment the iter variable.
 
@@ -864,7 +864,7 @@ namespace Body
 
 		const std::string& toFromReg = GetReg(RG::RAX, iterVarType);
 
-		code += headLabel + ":\n" +
+		code += "\n" + headLabel + ":\n" +
 						"\nmov " + toFromReg + ", " + iterVarAssignmentString +
 						"\ninc " + toFromReg +
 						"\nmov " + iterVarAssignmentString + ", " + toFromReg + "\n";
@@ -1119,9 +1119,11 @@ namespace Body
 					TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
 					GenOpNodeCode(code, asDerefNode->GetExpr(), t1, pointerType);
 
-					output = "; Copy result to rcx, as a middle-man\n" \
-						"mov rcx, " + RefTempVar(t0.adress, pointerType) +
-						"\nmov [RAX], RCX\n";
+					const i32 t0ActualAdress = GetAdressOfTemporary(t0);
+
+					output = "\n; Copy result to rcx, as a middle-man\n" +
+									 FetchIntoReg(RG::RCX, t0ActualAdress, pointerType) + "\n"
+									 "mov [RAX], RCX\n";
 
 
 					break;
