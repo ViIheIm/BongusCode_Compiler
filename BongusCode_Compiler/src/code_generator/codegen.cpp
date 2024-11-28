@@ -406,50 +406,50 @@ namespace Tools
 	std::tuple<std::string, std::string, std::string> GetFetchInstructionsForType(const RG reg, const PrimitiveType type)
 	{
 		std::string movVariant("mov");
-		std::string RegVariant = GetReg(reg, type);
+		std::string regVariant = GetReg(reg, type);
 		std::string sizeVariant = GetWordKindFromType(type);
 
 		if (type == PrimitiveType::i16 || type == PrimitiveType::ui16)
 		{
 			movVariant = "movzx ";
-			RegVariant = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
+			regVariant = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
 		}
 
-		return std::tuple(movVariant, RegVariant, sizeVariant);
+		return std::tuple(movVariant, regVariant, sizeVariant);
 	}
 
 	std::string FetchIntoReg(const RG reg, const i32 sourceAdress, const PrimitiveType sourceType)
 	{
-		const auto [movVariant, RegVariant, sizeVariant] = GetFetchInstructionsForType(reg, sourceType);
+		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(reg, sourceType);
 
-		std::string result = movVariant + " " + RegVariant + ", " + sizeVariant + " " + std::to_string(sourceAdress) + "[rsp]";
+		std::string result = movVariant + " " + regVariant + ", " + sizeVariant + " " + std::to_string(sourceAdress) + "[rsp]";
 
 		return result;
 	}
 
 	std::string FetchImmediateIntoReg(const RG reg, const std::string& immediate)
 	{
-		const auto [movVariant, RegVariant, sizeVariant] = GetFetchInstructionsForType(reg, AST::IntNode::s_defaultIntLiteralType);
+		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(reg, AST::IntNode::s_defaultIntLiteralType);
 
-		std::string result = movVariant + " " + RegVariant + ", " + immediate;
+		std::string result = movVariant + " " + regVariant + ", " + immediate;
 
 		return result;
 	}
 
 	std::string OperateOnReg(const RG reg, const std::string& op, const i32 operandAdress, const PrimitiveType operandType)
 	{
-		const auto [movVariant, RegVariant, sizeVariant] = GetFetchInstructionsForType(reg, operandType);
+		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(reg, operandType);
 
-		std::string result = op + " " + RegVariant + ", " + sizeVariant + " " + std::to_string(operandAdress) + "[rsp]";
+		std::string result = op + " " + regVariant + ", " + sizeVariant + " " + std::to_string(operandAdress) + "[rsp]";
 
 		return result;
 	}
 
 	std::string PushRegIntoMem(const RG reg, const i32 destAdress, const PrimitiveType destType)
 	{
-		const auto [movVariant, RegVariant, sizeVariant] = GetFetchInstructionsForType(reg, destType);
+		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(reg, destType);
 
-		std::string result = movVariant + " " + sizeVariant + " " + std::to_string(destAdress) + "[rsp]" + ", " + RegVariant;
+		std::string result = movVariant + " " + sizeVariant + " " + std::to_string(destAdress) + "[rsp]" + ", " + regVariant;
 
 		return result;
 	}
@@ -605,7 +605,7 @@ namespace Body
 
 				std::string output = "\n; " + t0.name + " /= " + t1.name + "\n" +
 														 FetchIntoReg(RG::RAX, t0ActualAdress, exprType) + "\n" +								// Store _tfirst in eax
-														 FetchIntoReg(RG::RBX, t1ActualAdress, exprType) + "\n" +								//"\nmov " + RBX + ", " + RefTempVar(t1.adress, exprType) +				// Store divisor in rbx
+														 FetchIntoReg(RG::RBX, t1ActualAdress, exprType) + "\n" +								// Store divisor in rbx
 														 "xor " + RDX + ", " + RDX + "\n" +																			// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
 														 "div " + RBX + "\n" +																									// Perform operation in ebx
 														 FetchImmediateIntoReg(RG::RBX, "3405691582 ; 0xCAFEBABE") + "\n" +			// Store sentinel value CAFEBABE in rbx in case of bugs.
