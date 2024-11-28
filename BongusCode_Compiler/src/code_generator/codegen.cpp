@@ -646,8 +646,6 @@ namespace Body
 		{
 			AST::SymNode* asSymNode = (AST::SymNode*)node;
 
-			//std::wstring key = g_symTable.ComposeKey(asSymNode->GetName(), 1); // TODO: Restructure symbol table.
-			//SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
 			SymTabEntry* entry = asSymNode->GetSymTabEntry();
 
 			if (entry == nullptr)
@@ -670,43 +668,17 @@ namespace Body
 				code += "\n; WARNING - Truncation or signed-unsigned mismatch";
 			}
 
-			// We must figure out whichever one is smaller. The temporary will still have exprType as it's type, but when we get the value
-			// into rax we need to use the appropriate size (QWORD PTR/DWORD PTR ... and RAX/EAX/AX ...)
 			const PrimitiveType smallestType = exprSize < entry->asVar.size ? exprType : entry->asVar.type;
 
 			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
 
-			// One version of the register is for when we get the local variable into rax,
-			// and the other is for when we export the value from rax into the temporary.
-			/*
-			std::string readReg(GetReg(RG::RAX, smallestType));
-			const std::string& writeReg = GetReg(RG::RAX, exprType);
-
-			// If the local variable we're moving into rax is 2 bytes in size(ui16/i16), we need to zero extend it.
-			// If this is the case, readReg must also be changed from AX to RAX, so this ugly hackaround does that to.
-			// TODO: Refactor this.
-			std::string movToRaxOp("mov ");
-			if (entry->asVar.type == PrimitiveType::ui16 || entry->asVar.type == PrimitiveType::i16)
-			{
-				movToRaxOp = "movzx ";
-				readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
-			}
-			*/
-
-			const auto [readReg, writeReg, movToRaxOp] = GetTypeDependentInstructions(
-				RG::RAX,
-				RG::RAX,
-				smallestType,
-				exprType,
-				entry->asVar.type
-			);
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 
 			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
-								 movToRaxOp + readReg + ", " + RefLocalVar(entry->asVar.adress, smallestType) +
-								 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + writeReg + "\n";
+													 FetchIntoReg(RG::RAX, entry->asVar.adress, smallestType) + "\n" +
+													 PushRegIntoMem(RG::RAX, t0ActualAdress, exprType);
 
 			code += output;
-			// std::cerr << output;
 
 			break;
 		}
