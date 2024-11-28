@@ -436,6 +436,15 @@ namespace Tools
 		return result;
 	}
 
+	std::string FetchImmediateIntoMem(const i32 destAdress, const PrimitiveType destType, const std::string& immediate)
+	{
+		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(RG::RAX, destType);
+
+		std::string result = movVariant + " " + sizeVariant + " " + std::to_string(destAdress) + "[rsp], " + immediate;
+
+		return result;
+	}
+
 	std::string OperateOnReg(const RG reg, const std::string& op, const i32 operandAdress, const PrimitiveType operandType)
 	{
 		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(reg, operandType);
@@ -619,20 +628,17 @@ namespace Body
 		case Node_k::IntNode:
 		{
 			AST::IntNode* asIntNode = (AST::IntNode*)node;
-	
-			// Get size we need to allocate.
-			//const ui16 sizeToAlloc = GetSizeFromType(exprType);
-			//CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, sizeToAlloc);
 
 			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
 
-			const std::string& RAX = GetReg(RG::RAX, exprType);
+			std::string intValueAsString = std::to_string(asIntNode->Get());
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 
-			std::string output = "\n; " + t0.name + " = " + std::to_string(asIntNode->Get()) +
-								 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + std::to_string(asIntNode->Get()) +
-								 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) + "\n"; // Also store result in rax.
+			std::string output = "\n; " + t0.name + " = " + intValueAsString + "\n" +
+													 FetchImmediateIntoMem(t0ActualAdress, exprType, intValueAsString) + "\n" +
+													 FetchIntoReg(RG::RAX, t0ActualAdress, exprType);
+
 			code += output;
-			// std::cerr << output;
 	
 			break;
 		}
