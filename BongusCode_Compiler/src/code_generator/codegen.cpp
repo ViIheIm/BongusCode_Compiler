@@ -697,11 +697,12 @@ namespace Body
 
 			// Get the mangled function name!
 			std::string mangledFunctionName = std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()));
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 
 			// Make sure to also store the result out into _t0.
-			output += "; " + t0.name + " = result of function " + mangledFunctionName + "\n" +
-					  "call " + mangledFunctionName + "\n" +
-					  "mov " + RefTempVar(t0.adress, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
+			output += "\n; " + t0.name + " = result of function " + mangledFunctionName + "\n" +
+								"call " + mangledFunctionName + "\n" +
+								PushRegIntoMem(RG::RAX, t0ActualAdress, exprType);
 
 			code += output;
 
@@ -980,9 +981,12 @@ namespace Body
 			GenOpNodeCode(code, arg, t0, exprType);
 
 			const std::string& reg = GetReg(callingConvention[nextSlot], exprType);
-			code += "; Push " + t0.name + " into " + reg + "\n"
-					"mov " + reg + ", " + RefTempVar(t0.adress, exprType) + "\n\n";
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 
+			std::string output = "\n; Push " + t0.name + " into " + reg + "\n" +
+													 FetchIntoReg(callingConvention[nextSlot], t0ActualAdress, exprType);
+
+			code += output;
 
 			// TODO: In the future we might want to support more than 4 arguments.
 			if (!(nextSlot < GetArraySize(callingConvention)))
@@ -1173,11 +1177,11 @@ namespace Body
 			{
 				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
 				
-				//PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
 				PrimitiveType funcRetType = asFunctionCallNode->GetSymTabEntry()->asFunction.retType;
 				
 				PushArgsIntoRegs(code, asFunctionCallNode);
-				code += "call " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
+
+				code += "\ncall " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
 
 				break;
 			}
