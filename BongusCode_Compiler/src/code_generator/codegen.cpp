@@ -211,21 +211,23 @@ struct TempVar
 	static const PrimitiveType s_tempVarDefaultType = AST::IntNode::s_defaultIntLiteralType;
 };
 
-// Allocation is done in two steps. First we get the allocated space with AllocStackSpace(), then we call CommitLastStackAlloc().
+
+static i32 g_tempsNamingCounter = 0;
+
+inline static void ResetTempsNaming(void)
+{
+	g_tempsNamingCounter = 0;
+}
+
 // The recordAllocs-parameter is where we store the stack space information
 // (CurrentFunctionMetaData::temporariesStackSectionSize for instance).
-inline static TempVar AllocStackSpace(i32* recordAllocs, bool resetHitCount = false)
+inline static TempVar AllocStackSpace(i32* recordAllocs, const i32 size)
 {
-	static i32 hitCount = 0; // <-- Yield _t0, _t1, _t2 ...
+	std::string retStr("_t" + std::to_string(g_tempsNamingCounter++));
+	const i32 stackAdress = *recordAllocs;
+	*recordAllocs += size;
 
-	if (resetHitCount)
-	{
-		hitCount = 0;
-	}
-
-	std::string retStr("_t" + std::to_string(hitCount++));
-
-	return { retStr, *recordAllocs };
+	return { retStr, stackAdress };
 }
 
 // This is where we commit the last allocation made with AllocStackSpace().
@@ -526,7 +528,7 @@ namespace Body
 
 		if (pointeeType == PrimitiveType::invalid)
 		{
-			wprintf(L"ERROR: couldn't find pointee type in " __FUNCDNAME__ "\n");
+			wprintf(L"ERROR: couldn't find pointee type in " __FUNCTION__ "\n");
 			Exit(ErrCodes::internal_compiler_error);
 		}
 
@@ -569,7 +571,7 @@ namespace Body
 
 			GenOpNodeCode(code, asOpNode->GetLHS(), t0, exprType);
 
-			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
 			GenOpNodeCode(code, asOpNode->GetRHS(), t1, exprType);
 	
 			const std::string& RAX = GetReg(RG::RAX, exprType);
@@ -735,7 +737,7 @@ namespace Body
 
 			PrimitiveType pointeeType = GetPointeeTypeFromDerefNode(asDerefNode);
 
-			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
 			GenOpNodeCode(code, asDerefNode->GetExpr(), t1, pointerType);
 
 			std::string output = GenDerefCode(pointeeType);
@@ -806,7 +808,7 @@ namespace Body
 			// mov eax, 5
 			AST::IntNode* asIntNode = (AST::IntNode*)upperBound;
 
-			const std::string& toReg = GetReg(RG::RAX, AST::IntNode::s_defaultIntLiteralType);
+			const std::string& toReg = GetReg(RG::RAX, iterVarType);
 
 			std::string output = "\nmov " + toReg + ", " + std::to_string(asIntNode->Get());
 			code += output;
@@ -879,9 +881,9 @@ namespace Body
 	inline static void GenForLoopCode(std::string& code, AST::ForLoopNode* node, i32* const largestTempAllocation)
 	{
 		// The iter var(typically i in C/C++ for loops) will be maintained as a temporary variable.
-		TempVar iterVar = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
 		const PrimitiveType iterVarType = PrimitiveType::ui64;
-		//CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(iterVarType));
+		TempVar iterVar = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(iterVarType));
+		
 		
 		// This variable will not take functions into account, so if it encounters 2 loops in function Foo,
 		// and then a loop in main, the main loop will not start over numbered as 0.
@@ -958,9 +960,10 @@ namespace Body
 		for (AST::Node* arg = node->GetArgs(); arg != nullptr; arg = arg->GetRightSibling())
 		{
 			const PrimitiveType exprType = GetTypeFromNode(arg);
+			const i32 exprSize = GetSizeFromType(exprType);
 
 			// We need to generate the code for the values we're pushing before we push them.
-			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
 			GenOpNodeCode(code, arg, t0, exprType);
 
 			const std::string& reg = GetReg(callingConvention[nextSlot], exprType);
@@ -1116,7 +1119,7 @@ namespace Body
 					AST::DerefNode* asDerefNode = (AST::DerefNode*)assNodeVar;
 					const PrimitiveType pointerType = PrimitiveType::pointer;
 					
-					TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
+					TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(pointerType));
 					GenOpNodeCode(code, asDerefNode->GetExpr(), t1, pointerType);
 
 					const i32 t0ActualAdress = GetAdressOfTemporary(t0);
@@ -1207,8 +1210,6 @@ namespace Boilerplate
 
 	inline static void GenerateHeader(std::string& code)
 	{
-		//code += ".686P        ; Enable x86 - 64 (64 - bit mode)\n" \
-				".model flat  ; Flat memory model\n";
 		code += "OPTION DOTNAME   ; Allows the use of dot notation(MASM64 requires this for 64 - bit assembly)\n";
 
 		GenerateDataSection(code);
