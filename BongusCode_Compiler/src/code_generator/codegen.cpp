@@ -402,7 +402,7 @@ namespace Tools
 	}
 
 	// string1 -> mov variant
-	// string2 -> RAX variant
+	// string2 -> REG variant
 	// string3 -> size variant (WORD PTR / DWORD PTR / QWORD PTR)
 	std::tuple<std::string, std::string, std::string> GetFetchInstructionsForType(const RG reg, const PrimitiveType type)
 	{
@@ -412,8 +412,8 @@ namespace Tools
 
 		if (type == PrimitiveType::i16 || type == PrimitiveType::ui16)
 		{
-			movVariant = "movzx ";
-			regVariant = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
+			movVariant = "movzx";
+			regVariant = GetReg(reg, PrimitiveType::ui64); // Yields 64-bit version (e.g. RAX).
 		}
 
 		return std::tuple(movVariant, regVariant, sizeVariant);
