@@ -83,7 +83,7 @@ namespace AST
 		inline const ui64 Get(void) const { return n; }
 		friend Node* MakeIntNode(i32);
 
-		static const PrimitiveType s_defaultIntLiteralType = PrimitiveType::i32;
+		static const PrimitiveType s_defaultIntLiteralType = PrimitiveType::i64;
 
 	private:
 

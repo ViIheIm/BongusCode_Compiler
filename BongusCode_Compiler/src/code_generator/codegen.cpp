@@ -1112,7 +1112,7 @@ namespace Body
 					{
 					case PrimitiveType::ui16:
 					case PrimitiveType::i16:
-						RCXVariant = "CL";
+						RCXVariant = "CX";
 						break;
 
 					case PrimitiveType::ui32:
