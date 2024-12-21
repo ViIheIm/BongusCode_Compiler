@@ -1103,9 +1103,42 @@ namespace Body
 
 					const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 
+
+#pragma region REFACTORINO
+					// Get the correct version of RCX for pushing RCX -> pointee.
+					// TODO: Refactor.
+					std::string RCXVariant("invalid register");
+					switch (pointeeType)
+					{
+					case PrimitiveType::ui16:
+					case PrimitiveType::i16:
+						RCXVariant = "CL";
+						break;
+
+					case PrimitiveType::ui32:
+					case PrimitiveType::i32:
+						RCXVariant = "ECX";
+						break;
+
+					case PrimitiveType::ui64:
+					case PrimitiveType::i64:
+						RCXVariant = "RCX";
+						break;
+
+					default:
+						break;
+					}
+					if (RCXVariant == "invalid register")
+					{
+						wprintf(L"ERROR: Couldn't find register in " __FUNCTION__ "\n");
+						Exit(ErrCodes::internal_compiler_error);
+					}
+#pragma endregion
+
+
 					output = "\n; Copy " + t0.name + " to rcx, as a middle-man\n" +
 									 FetchIntoReg(RG::RCX, t0ActualAdress, pointerType) + "\n"
-									 "mov [RAX], RCX\n";
+									 "mov [RAX], " + RCXVariant + "\n";
 
 
 					break;
