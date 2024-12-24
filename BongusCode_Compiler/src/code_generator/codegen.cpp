@@ -6,6 +6,7 @@
 #include "../CStrLib.h"
 #include "../Utils.h"
 #include <cassert>
+#include <iostream>
 
 /*
 	Name mangling in bonguscode is like how most C-compilers mangle their names.
@@ -179,6 +180,8 @@ namespace CurrentFunctionMetaData
 	static std::string funcName("NO_NAME_ASSIGNED");
 
 	PrimitiveType retType;
+
+	AST::FunctionNode* currentFunction = nullptr;
 }
 
 // This uses pointers instead of modifying the above namespace's globals directly, so we can easily swap out where the metadata
@@ -204,35 +207,36 @@ struct TempVar
 {
 	std::string name;
 	i32 adress;
-
-	static const PrimitiveType s_tempVarDefaultType = AST::IntNode::s_defaultIntLiteralType;
+	PrimitiveType type;
 };
 
-// Allocation is done in two steps. First we get the allocated space with AllocStackSpace(), then we call CommitLastStackAlloc().
+
+static i32 g_tempsNamingCounter = 0;
+
+inline static void ResetTempsNaming(void)
+{
+	g_tempsNamingCounter = 0;
+}
+
 // The recordAllocs-parameter is where we store the stack space information
 // (CurrentFunctionMetaData::temporariesStackSectionSize for instance).
-inline static TempVar AllocStackSpace(i32* recordAllocs, bool resetHitCount = false)
+inline static TempVar AllocStackSpace(i32* recordAllocs, const i32 size, const PrimitiveType type)
 {
-	static i32 hitCount = 0; // <-- Yield _t0, _t1, _t2 ...
+	std::string retStr("_t" + std::to_string(g_tempsNamingCounter++));
+	const i32 stackAdress = *recordAllocs;
+	*recordAllocs += size;
 
-	if (resetHitCount)
-	{
-		hitCount = 0;
-	}
-
-	std::string retStr("_t" + std::to_string(hitCount++));
-
-	return { retStr, *recordAllocs };
+	return { retStr, stackAdress, type };
 }
 
 // This is where we commit the last allocation made with AllocStackSpace().
 // We may allocate before we know the size, so the top-of-stack will be returned by AllocStackSpace(), meanwhile,
 // when we finally know the size of our previous allocation, we call this function to commit the allocation by incrementing
 // the stack variable.
-inline static void CommitLastStackAlloc(i32* recordAllocs, i32 size)
-{
-	*recordAllocs += size;
-}
+//inline static void CommitLastStackAlloc(i32* recordAllocs, i32 size)
+//{
+//	*recordAllocs += size;
+//}
 
 inline static const ui16 GetSizeFromType(const PrimitiveType type)
 {
@@ -344,9 +348,7 @@ bool FindNodeInVisitedNodes(AST::Node* node)
 	return false;
 }
 
-// TODO: Only necessary for debug printing, remove later.
-#include <iostream>
-namespace Body
+namespace Tools
 {
 	inline static std::string GetWordKindFromType(const PrimitiveType type)
 	{
@@ -380,6 +382,11 @@ namespace Body
 		}
 	}
 
+	inline static i32 GetAdressOfTemporary(const TempVar& t)
+	{
+		return CurrentFunctionMetaData::varsStackSectionSize + t.adress;
+	}
+
 	inline static std::string RefTempVar(const i32 offset, const PrimitiveType type)
 	{
 		// EXAMPLE:
@@ -394,14 +401,162 @@ namespace Body
 		return std::string(wordKind + " " + std::to_string(offset) + "[rsp]");
 	}
 
-	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node);
+	// string1 -> mov variant
+	// string2 -> REG variant
+	// string3 -> size variant (WORD PTR / DWORD PTR / QWORD PTR)
+	std::tuple<std::string, std::string, std::string> GetFetchInstructionsForType(const RG reg, const PrimitiveType type)
+	{
+		std::string movVariant("mov");
+		std::string regVariant = GetReg(reg, type);
+		std::string sizeVariant = GetWordKindFromType(type);
 
-	static void GenOpNodeCode(std::string& code, AST::Node* node, const TempVar& t0, const PrimitiveType exprType)
+		if (type == PrimitiveType::i16 || type == PrimitiveType::ui16)
+		{
+			movVariant = "movzx";
+			regVariant = GetReg(reg, PrimitiveType::ui64); // Yields 64-bit version (e.g. RAX).
+		}
+
+		return std::tuple(movVariant, regVariant, sizeVariant);
+	}
+
+	std::string FetchIntoReg(const RG reg, const i32 sourceAdress, const PrimitiveType sourceType)
+	{
+		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(reg, sourceType);
+
+		std::string result = movVariant + " " + regVariant + ", " + sizeVariant + " " + std::to_string(sourceAdress) + "[rsp]";
+
+		return result;
+	}
+
+	std::string FetchImmediateIntoReg(const RG reg, const std::string& immediate)
+	{
+		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(reg, AST::IntNode::s_defaultIntLiteralType);
+
+		std::string result = movVariant + " " + regVariant + ", " + immediate;
+
+		return result;
+	}
+
+	std::string FetchImmediateIntoMem(const i32 destAdress, const PrimitiveType destType, const std::string& immediate)
+	{
+		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(RG::RAX, destType);
+
+		std::string result = movVariant + " " + sizeVariant + " " + std::to_string(destAdress) + "[rsp], " + immediate;
+
+		return result;
+	}
+
+	std::string OperateOnReg(const RG reg, const std::string& op, const i32 operandAdress, const PrimitiveType operandType)
+	{
+		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(reg, operandType);
+
+		std::string result = op + " " + regVariant + ", " + sizeVariant + " " + std::to_string(operandAdress) + "[rsp]";
+
+		return result;
+	}
+
+	std::string PushRegIntoMem(const RG reg, const i32 destAdress, const PrimitiveType destType)
+	{
+		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(reg, destType);
+
+		std::string result = movVariant + " " + sizeVariant + " " + std::to_string(destAdress) + "[rsp]" + ", " + regVariant;
+
+		return result;
+	}
+}
+using namespace Tools;
+
+namespace Body
+{
+	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node);
+	
+	// Returns a tuple consisting of <read register, write register, mov type>
+	// Could be e.g. <EAX, EAX, movzx>.
+	inline static std::tuple<std::string, std::string, std::string> GetTypeDependentInstructions(
+		const RG readReg,
+		const RG writeReg,
+		const PrimitiveType readRegType,
+		const PrimitiveType writeRegType,
+		const PrimitiveType localVarType
+	)
+	{
+		std::string readRegStr(GetReg(readReg, readRegType));
+		std::string writeRegStr(GetReg(writeReg, writeRegType));
+		std::string movToRaxOpStr("mov ");
+
+		// If the local var we're moving into rax's type is 2 bytes in size then we need to zero extend it.
+		if (localVarType == PrimitiveType::ui16 || localVarType == PrimitiveType::i16)
+		{
+			movToRaxOpStr = "movzx ";
+			readRegStr = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
+		}
+		
+		return std::tuple(readRegStr, writeRegStr, movToRaxOpStr);
+	}
+
+	inline static const PrimitiveType GetPointeeTypeFromDerefNode(AST::DerefNode* derefNode)
+	{
+		/*
+				Hunt through the subexpr until we find a pointer node.
+				Most sane dereference operations evolve from a single pointer, e.g.
+					¤(pointer + 1) = 200
+				and not typically
+					¤(pointer + **another pointer**) = 200
+
+				in fact(just checked this in compiler explorer), adding a pointer to another pointer in C++ raises an error,
+				so we can safely look for only 1 pointer in the subexpression, and take it's pointeeType.
+
+				There's a safety check in the semantics pass which checks for more than 1 pointer in a subexpression,
+				which raises an error if several are found, so we can happily pick the first pointee type here and call it a day.
+			*/
+
+		PrimitiveType pointeeType = PrimitiveType::invalid;
+
+		for (AST::Node* symNode : AST::GetAllChildNodesOfType(derefNode, Node_k::SymNode))
+		{
+			AST::SymNode* asSymNode = (AST::SymNode*)symNode;
+			SymTabEntry* entry = asSymNode->GetSymTabEntry();
+
+			if (entry->asVar.type == PrimitiveType::pointer)
+			{
+				// Find first pointer, get it's pointee-type and break.
+				pointeeType = entry->asVar.pointeeType;
+				break;
+			}
+		}
+
+		if (pointeeType == PrimitiveType::invalid)
+		{
+			wprintf(L"ERROR: couldn't find pointee type in " __FUNCTION__ "\n");
+			Exit(ErrCodes::internal_compiler_error);
+		}
+
+		return pointeeType;
+	}
+
+	inline static const std::string GenDerefCode(const PrimitiveType pointeeType)
+	{
+			std::string readReg(GetReg(RG::RAX, pointeeType));
+			std::string movToRaxOp("mov ");
+			std::string wordKind = GetWordKindFromType(pointeeType);
+			if (pointeeType == PrimitiveType::ui16 || pointeeType == PrimitiveType::i16)
+			{
+				movToRaxOp = "movzx ";
+				readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
+			}
+			
+			// By this point, the entire expression should be generated and held in rax.
+			// Dereference rax and store it out in _t0.
+			std::string output = "\n" + movToRaxOp + readReg + ", " + wordKind + "[RAX]\n";
+
+			return output;
+	}
+
+
+	static TempVar GenOpNodeCode(std::string& code, AST::Node* node)
 	{
 		visitedNodes.push_back(node);
 
-		// Get size from expression type.
-		const ui16 exprSize = GetSizeFromType(exprType);
 	
 		switch (node->GetNodeKind())
 		{
@@ -411,39 +566,40 @@ namespace Body
 			std::string opString = asOpNode->GetOpAsString();
 	
 
-			GenOpNodeCode(code, asOpNode->GetLHS(), t0, exprType);
-
-			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
-			GenOpNodeCode(code, asOpNode->GetRHS(), t1, exprType);
+			TempVar t0 = GenOpNodeCode(code, asOpNode->GetLHS());
+			TempVar t1 = GenOpNodeCode(code, asOpNode->GetRHS());
 	
-			const std::string& RAX = GetReg(RG::RAX, exprType);
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
+			const PrimitiveType t0Type = t0.type;
+
+			const i32 t1ActualAdress = GetAdressOfTemporary(t1);
+			const PrimitiveType t1Type = t1.type;
 
 			if (opString == "+")
 			{
-				std::string output = "\n; " + t0.name + " += " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
-									 "\nadd " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+				std::string output = "\n; " + t0.name + " += " + t1.name + "\n" +
+														 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+														 OperateOnReg(RG::RAX, "add", t1ActualAdress, t1Type) + "\n" +
+														 PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
 				code += output;
-				// std::cerr << output;
 			}
 			if (opString == "-")
 			{
-				std::string output = "\n; " + t0.name + " -= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
-									 "\nsub " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+				std::string output = "\n; " + t0.name + " -= " + t1.name + "\n" +
+														 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+														 OperateOnReg(RG::RAX, "sub", t1ActualAdress, t1Type) + "\n" +
+														 PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+
 				code += output;
-				// std::cerr << output;
 			}
 			else if (opString == "*")
 			{
-				std::string output = "\n; " + t0.name + " *= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
-									 "\nimul " + RAX + ", " + RefTempVar(t1.adress, exprType) +		// Perform operation in eax
-									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+				std::string output = "\n; " + t0.name + " *= " + t1.name + "\n" +
+														 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+														 OperateOnReg(RG::RAX, "imul", t1ActualAdress, t1Type) + "\n" +
+														 PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+
 				code += output;
-				// std::cerr << output;
 			}
 			else if (opString == "/")
 			{
@@ -451,49 +607,45 @@ namespace Body
 				// https://www.youtube.com/watch?v=vwTYM0oSwjg
 				// TLDR: For 64 bit division, the result goes in rax, the remainder in rdx
 				// The divisor goes in rbx.
-				const std::string& RBX = GetReg(RG::RBX, exprType);
-				const std::string& RDX = GetReg(RG::RDX, exprType);
+				//const std::string& RBX = GetReg(RG::RBX, exprType);
+				//const std::string& RDX = GetReg(RG::RDX, exprType);
 
-				std::string output = "\n; " + t0.name + " /= " + t1.name +
-									 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) +		// Store _tfirst in eax
-									 "\nmov " + RBX + ", " + RefTempVar(t1.adress, exprType) +		// Store divisor in rbx
-									 "\nxor " + RDX + ", " + RDX +									// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
-									 "\ndiv " + RBX +												// Perform operation in ebx
-									 "\nmov " + RBX + ", 3405691582 ; 0xCAFEBABE" +					// Store sentinel value CAFEBABE in rbx in case of bugs.
-									 "\nmov " + RDX + ", 4276993775 ; 0xFEEDBEEF" +					// Do the same for rdx with FEEDBEEF since it was also used.
-									 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + RAX + "\n";	// Store result in _tfirst on stack
+				std::string output = "\n; " + t0.name + " /= " + t1.name + "\n" +
+														 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +									// Store _tfirst in eax
+														 FetchIntoReg(RG::RBX, t1ActualAdress, t1Type) + "\n" +									// Store divisor in rbx
+														 "xor RDX, RDX\n" +																											// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
+														 "div RBX\n" +																													// Perform operation in ebx
+														 FetchImmediateIntoReg(RG::RBX, "3405691582 ; 0xCAFEBABE") + "\n" +			// Store sentinel value CAFEBABE in rbx in case of bugs.
+														 FetchImmediateIntoReg(RG::RDX, "4276993775 ; 0xFEEDBEEF") + "\n" +			// Do the same for rdx with FEEDBEEF since it was also used.
+														 PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);												// Store result in _tfirst on stack
 				code += output;
-				// std::cerr << output;
 			}
-	
-			break;
+
+			return t0;
 		}
 		case Node_k::IntNode:
 		{
 			AST::IntNode* asIntNode = (AST::IntNode*)node;
-	
-			// Get size we need to allocate.
-			//const ui16 sizeToAlloc = GetSizeFromType(exprType);
-			//CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, sizeToAlloc);
 
-			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
+			const PrimitiveType t0Type = AST::IntNode::s_defaultIntLiteralType;
+			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(t0Type), t0Type);
 
-			const std::string& RAX = GetReg(RG::RAX, exprType);
+			std::string intValueAsString = std::to_string(asIntNode->Get());
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
+			
 
-			std::string output = "\n; " + t0.name + " = " + std::to_string(asIntNode->Get()) +
-								 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + std::to_string(asIntNode->Get()) +
-								 "\nmov " + RAX + ", " + RefTempVar(t0.adress, exprType) + "\n"; // Also store result in rax.
+			std::string output = "\n; " + t0.name + " = " + intValueAsString + "\n" +
+													 FetchImmediateIntoMem(t0ActualAdress, t0Type, intValueAsString) + "\n" +
+													 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type);
+
 			code += output;
-			// std::cerr << output;
 	
-			break;
+			return t0;
 		}
 		case Node_k::SymNode:
 		{
 			AST::SymNode* asSymNode = (AST::SymNode*)node;
 
-			//std::wstring key = g_symTable.ComposeKey(asSymNode->GetName(), 1); // TODO: Restructure symbol table.
-			//SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
 			SymTabEntry* entry = asSymNode->GetSymTabEntry();
 
 			if (entry == nullptr)
@@ -502,75 +654,40 @@ namespace Body
 				Exit(ErrCodes::undeclared_symbol);
 			}
 
-			// The temporary inherits it's size from the exprType-param.
-			// If the local variable we're copying from is larger, truncation will happen here, and a warning will be issued.
-			// If the local variable we're copying from is smaller, we'll include values outside of the variable which happen to be there on the stack, and this will be even worse.
-			// TODO: The types might be the same size though, in which case this isn't a truncation. Split this out into two checks - One for signed-unsigned mismatch, the other for truncation.
-			if (exprType != entry->asVar.type)
-			{
-				wprintf(L"WARNING: Truncation or signed-unsigned mismatch when trying to copy %s into temporary.\n"\
-						L"Assignee has type %s, local var has type %s.\n\n",
-						entry->name.c_str(), PrimitiveTypeReflectionWide[(ui16)exprType], PrimitiveTypeReflectionWide[(ui16)entry->asVar.type]
-				);
-
-				code += "\n; WARNING - Truncation or signed-unsigned mismatch";
-			}
-
-			// We must figure out whichever one is smaller. The temporary will still have exprType as it's type, but when we get the value
-			// into rax we need to use the appropriate size (QWORD PTR/DWORD PTR ... and RAX/EAX/AX ...)
-			const PrimitiveType smallestType = exprSize < entry->asVar.size ? exprType : entry->asVar.type;
-
-			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
-
-			// One version of the register is for when we get the local variable into rax,
-			// and the other is for when we export the value from rax into the temporary.
-			std::string readReg(GetReg(RG::RAX, smallestType));
-			const std::string& writeReg = GetReg(RG::RAX, exprType);
-
-
-			// If the local variable we're moving into rax is 2 bytes in size(ui16/i16), we need to zero extend it.
-			// If this is the case, readReg must also be changed from AX to RAX, so this ugly hackaround does that to.
-			// TODO: Refactor this.
-			std::string movToRaxOp("mov ");
-			if (entry->asVar.type == PrimitiveType::ui16 || entry->asVar.type == PrimitiveType::i16)
-			{
-				movToRaxOp = "movzx ";
-				readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
-			}
+			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(entry->asVar.type), entry->asVar.type);
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 
 			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
-								 movToRaxOp + readReg + ", " + RefLocalVar(entry->asVar.adress, smallestType) +
-								 "\nmov " + RefTempVar(t0.adress, exprType) + ", " + writeReg + "\n";
+													 FetchIntoReg(RG::RAX, entry->asVar.adress, t0.type) + "\n" +
+													 PushRegIntoMem(RG::RAX, t0ActualAdress, t0.type);
 
 			code += output;
-			// std::cerr << output;
 
-			break;
+			return t0;
 		}
 		case Node_k::FunctionCallNode:
 		{
 			AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
 
-			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
-
 			// We've already made sure in the harvest pass that this is indeed a function, and in the semantics pass that this function can be called.
 			std::string output;
 
-			//PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
-			PrimitiveType funcRetType = asFunctionCallNode->GetSymTabEntry()->asFunction.retType;
 			PushArgsIntoRegs(output, asFunctionCallNode);
 
-			// Get the mangled function name!
 			std::string mangledFunctionName = std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()));
 
+			const PrimitiveType funcRetType = asFunctionCallNode->GetSymTabEntry()->asFunction.retType;
+			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(funcRetType), funcRetType);
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
+
 			// Make sure to also store the result out into _t0.
-			output += "; " + t0.name + " = result of function " + mangledFunctionName + "\n" +
-					  "call " + mangledFunctionName + "\n" +
-					  "mov " + RefTempVar(t0.adress, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
+			output += "\n; " + t0.name + " = result of function " + mangledFunctionName + "\n" +
+								"call " + mangledFunctionName + "\n" +
+								PushRegIntoMem(RG::RAX, t0ActualAdress, funcRetType);
 
 			code += output;
 
-			break;
+			return t0;
 		}
 		case Node_k::AddrOfNode:
 		{
@@ -578,78 +695,195 @@ namespace Body
 			SymTabEntry* entry = asAddrOfNode->GetSymTabEntry();
 			const PrimitiveType addrOfNodeExprType = PrimitiveType::pointer;
 
-			CommitLastStackAlloc(&CurrentFunctionMetaData::temporariesStackSectionSize, exprSize);
+			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(addrOfNodeExprType), addrOfNodeExprType);
 
-			std::string readReg(GetReg(RG::RAX, addrOfNodeExprType));
-			const std::string& writeReg = GetReg(RG::RAX, exprType);
-
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 			std::string output = "\n; " + t0.name + " = (addr of local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
-				"lea " + readReg + ", " + RefLocalVar(entry->asVar.adress, addrOfNodeExprType) +
-				"\nmov " + RefTempVar(t0.adress, addrOfNodeExprType) + ", " + writeReg + "\n";
+													 OperateOnReg(RG::RAX, "lea", entry->asVar.adress, addrOfNodeExprType) + "\n" +
+													 PushRegIntoMem(RG::RAX, t0ActualAdress, addrOfNodeExprType);
+
 
 			code += output;
 
-			break;
+			return t0;
 		}
 		case Node_k::DerefNode:
 		{
 			AST::DerefNode* asDerefNode = (AST::DerefNode*)node;
 			const PrimitiveType pointerType = PrimitiveType::pointer;
 			
-			/*
-				Hunt through the subexpr until we find a pointer node.
-				Most sane dereference operations evolve from a single pointer, e.g.
-					¤(pointer + 1) = 200
-				and not typically
-					¤(pointer + **another pointer**) = 200
+			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(pointerType), pointerType);
 
-				in fact(just checked this in compiler explorer), adding a pointer to another pointer in C++ raises an error,
-				so we can safely look for only 1 pointer in the subexpression, and take it's pointeeType.
-				
-				There's a safety check in the semantics pass which checks for more than 1 pointer in a subexpression,
-				which raises an error if several are found, so we can happily pick the first pointee type here and call it a day.
-			*/
-			PrimitiveType pointeeType = AST::IntNode::s_defaultIntLiteralType;
-			for (AST::Node* symNode : AST::GetAllChildNodesOfType(asDerefNode, Node_k::SymNode))
-			{
-				AST::SymNode* asSymNode = (AST::SymNode*)symNode;
-				SymTabEntry* entry = asSymNode->GetSymTabEntry();
+			const PrimitiveType pointeeType = GetPointeeTypeFromDerefNode(asDerefNode);
 
-				if (entry->asVar.type == PrimitiveType::pointer)
-				{
-					// Find first pointer, get it's pointee-type and break.
-					pointeeType = entry->asVar.pointeeType;
-					break;
-				}
-			}
+			TempVar t1 = GenOpNodeCode(code, asDerefNode->GetExpr());
 
-			TempVar t1 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
-			GenOpNodeCode(code, asDerefNode->GetExpr(), t1, pointerType);
+			std::string output = GenDerefCode(pointeeType);
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
+			
 
-			/*
-				mov     rax, QWORD PTR b$[rsp]
-				movzx   eax, WORD PTR[rax]
-			*/
+			output += "\n; Move out to " + t0.name + "\n" +
+								PushRegIntoMem(RG::RAX, t0ActualAdress, t0.type);
 
-			std::string readReg(GetReg(RG::RAX, pointeeType));
-			std::string movToRaxOp("mov ");
-			std::string wordKind = GetWordKindFromType(pointeeType);
-			if (pointeeType == PrimitiveType::ui16 || pointeeType == PrimitiveType::i16)
-			{
-				movToRaxOp = "movzx ";
-				readReg = Registers::Regs[(ui16)RG::RAX][0]; // Yields RAX.
-			}
+			code += output;
 
-			// By this point, the entire expression should be generated and held in rax.
-			// Dereference rax and store it out in _t0.
-			std::string output = "\n; _t0 = Deref operation of previous expr(rax).\n" +
-				movToRaxOp + readReg + ", " + wordKind + "[RAX]\n";
+			return t0;
+		}
+		}
+	}
+
+	// This function generates code to store a value into a memory address either through reading a variable
+	// or by supplying an immediate value, depending on if the node given is a symNode or an intNode.
+	inline static void GenAssignmentToStackMem(std::string& code, AST::Node* valueNode, const ui32 stackAddress, const PrimitiveType assigneeType)
+	{
+		std::string assignmentString = GetWordKindFromType(assigneeType) + " " + std::to_string(stackAddress) + "[rsp]";
+
+		switch (valueNode->GetNodeKind())
+		{
+		case Node_k::IntNode:
+		{
+			AST::IntNode* asIntNode = (AST::IntNode*)valueNode;
+
+			const std::string& toFromReg = GetReg(RG::RAX, assigneeType);
+
+			std::string output = "\nmov " + toFromReg + ", " + std::to_string(asIntNode->Get()) +
+							"\nmov " + assignmentString + ", " + toFromReg;
+
+			code += output;
+
+			break;
+		}
+		case Node_k::SymNode:
+		{
+			AST::SymNode* asSymNode = (AST::SymNode*)valueNode;
+			SymTabEntry* entry = asSymNode->GetSymTabEntry();
+			const PrimitiveType symType = entry->asVar.type;
+
+			const auto [readReg, writeReg, movToRaxOp] = GetTypeDependentInstructions(
+				RG::RAX,
+				RG::RAX,
+				symType,
+				assigneeType,
+				symType
+			);
+
+			std::string output = "\n" + movToRaxOp + readReg + ", " + RefLocalVar(entry->asVar.adress, symType) +
+													 "\nmov " + assignmentString + ", " + writeReg;
 
 			code += output;
 
 			break;
 		}
 		}
+	}
+
+	inline static void GenForLoopHeadComparison(std::string& code, AST::Node* upperBound, const std::string& labelToJumpTo, const ui32 iterVarAddress, const PrimitiveType iterVarType)
+	{
+		switch (upperBound->GetNodeKind())
+		{
+		case Node_k::IntNode:
+		{
+			// mov eax, 5
+			AST::IntNode* asIntNode = (AST::IntNode*)upperBound;
+
+			const std::string& toReg = GetReg(RG::RAX, iterVarType);
+
+			std::string output = "\nmov " + toReg + ", " + std::to_string(asIntNode->Get());
+			code += output;
+
+			break;
+		}
+		case Node_k::SymNode:
+		{
+			// mov eax, DWORD PTR upperBound[rsp]
+			AST::SymNode* asSymNode = (AST::SymNode*)upperBound;
+			SymTabEntry* entry = asSymNode->GetSymTabEntry();
+			const PrimitiveType symType = entry->asVar.type;
+
+			const std::string bringInSymString = GetWordKindFromType(entry->asVar.type) + " " + std::to_string(entry->asVar.adress) + "[rsp]";
+			const auto [readReg, writeReg, movToRaxOp] = GetTypeDependentInstructions(
+				RG::RAX,
+				RG::RAX,
+				symType,
+				symType,
+				symType
+			);
+
+			std::string output = "\n" + movToRaxOp + readReg + ", " + bringInSymString + "\n";
+			code += output;
+
+			break;
+		}
+		}
+		
+		// Now it's time to compare with the iter variable and jump if greater than or equal to.
+		const std::string iterVarString = GetWordKindFromType(iterVarType) + " " + std::to_string(iterVarAddress) + "[rsp]";
+		code += "\ncmp " + iterVarString + ", " + GetReg(RG::RAX, iterVarType) +
+						"\njge SHORT " + labelToJumpTo + "\n";
+	}
+
+	inline static void GenForLoopHeadCode(
+		std::string& code,
+		AST::ForLoopHeadNode* node,
+		TempVar& iterVar,
+		const PrimitiveType iterVarType,
+		const std::string& headLabel,
+		const std::string& bodyLabel,
+		const std::string& exitLabel
+	)
+	{
+		const ui32 actualAddress = CurrentFunctionMetaData::varsStackSectionSize + iterVar.adress;
+		GenAssignmentToStackMem(code, node->GetLowerBound(), actualAddress, iterVarType);
+	
+		// Now we must generate the jump instruction.
+		code += "\njmp SHORT " + bodyLabel + "\n";
+
+		// And then for the actual head, where we increment the iter variable.
+
+		const std::string iterVarAssignmentString = GetWordKindFromType(iterVarType) + " " + std::to_string(actualAddress) + "[rsp]";
+
+		const std::string& toFromReg = GetReg(RG::RAX, iterVarType);
+
+		code += "\n" + headLabel + ":\n" +
+						"\nmov " + toFromReg + ", " + iterVarAssignmentString +
+						"\ninc " + toFromReg +
+						"\nmov " + iterVarAssignmentString + ", " + toFromReg + "\n";
+
+
+		// Now we can generate code for the comparison between iterVar and the upper bound.
+		GenForLoopHeadComparison(code, node->GetUpperBound(), exitLabel, actualAddress, iterVarType);
+	}
+
+	void GenerateFunctionBody(std::string& code, AST::Node* node, i32* const largestTempAllocation);
+
+	inline static void GenForLoopCode(std::string& code, AST::ForLoopNode* node, i32* const largestTempAllocation)
+	{
+		// The iter var(typically i in C/C++ for loops) will be maintained as a temporary variable.
+		const PrimitiveType iterVarType = PrimitiveType::ui64;
+		TempVar iterVar = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(iterVarType), iterVarType);
+		
+		
+		// This variable will not take functions into account, so if it encounters 2 loops in function Foo,
+		// and then a loop in main, the main loop will not start over numbered as 0.
+		static ui32 s_forLoopsEncountered = 0;
+		std::string forLoopNumStr = std::to_string(s_forLoopsEncountered);
+		std::string headLabel = "LH" + forLoopNumStr + "@" + CurrentFunctionMetaData::funcName;
+		std::string bodyLabel = "LB" + forLoopNumStr + "@" + CurrentFunctionMetaData::funcName;
+		std::string exitLabel = "LE" + forLoopNumStr + "@" + CurrentFunctionMetaData::funcName;
+		s_forLoopsEncountered++;
+
+		// Fix the head (iter var init + comparison)
+		GenForLoopHeadCode(code, (AST::ForLoopHeadNode*)node->GetHead(), iterVar, iterVarType, headLabel, bodyLabel, exitLabel);
+
+		// Generate body
+		code += bodyLabel + ":\n";
+		GenerateFunctionBody(code, node->GetBody(), largestTempAllocation);
+
+		// Jump back to head after executing an iteration.
+		code += "jmp SHORT " + headLabel + "\n";
+
+		// Place the exit label.
+		code += exitLabel + ":\n";
 	}
 
 	inline static void PushArgsIntoRegs(std::string& code, AST::FunctionCallNode* node)
@@ -703,16 +937,19 @@ namespace Body
 
 		for (AST::Node* arg = node->GetArgs(); arg != nullptr; arg = arg->GetRightSibling())
 		{
-			const PrimitiveType exprType = GetTypeFromNode(arg);
+			const PrimitiveType argType = GetTypeFromNode(arg);
+			const i32 exprSize = GetSizeFromType(argType);
 
 			// We need to generate the code for the values we're pushing before we push them.
-			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize);
-			GenOpNodeCode(code, arg, t0, exprType);
+			TempVar t0 = GenOpNodeCode(code, arg);
 
-			const std::string& reg = GetReg(callingConvention[nextSlot], exprType);
-			code += "; Push " + t0.name + " into " + reg + "\n"
-					"mov " + reg + ", " + RefTempVar(t0.adress, exprType) + "\n\n";
+			const std::string& reg = GetReg(callingConvention[nextSlot], argType);
+			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 
+			std::string output = "\n; Push " + t0.name + " into " + reg + "\n" +
+													 FetchIntoReg(callingConvention[nextSlot], t0ActualAdress, argType);
+
+			code += output;
 
 			// TODO: In the future we might want to support more than 4 arguments.
 			if (!(nextSlot < GetArraySize(callingConvention)))
@@ -777,8 +1014,8 @@ namespace Body
 			{
 				// This is just a lone op node without assignment, but we'll perform the evaluation.
 				// Because of this, we're supplying the default type.
-				TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
-				GenOpNodeCode(code, node, t0, TempVar::s_tempVarDefaultType);
+				ResetTempsNaming();
+				TempVar t0 = GenOpNodeCode(code, node);
 				
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
 				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
@@ -798,12 +1035,15 @@ namespace Body
 				i32 stackLocation = -1;
 				PrimitiveType exprType = PrimitiveType::invalid;
 
-				if (asAssNode->GetVar()->GetNodeKind() == Node_k::SymNode)
-				{
-					AST::SymNode* var = (AST::SymNode*)asAssNode->GetVar();
+				AST::Node* assNodeVar = asAssNode->GetVar();
+				const Node_k assNodeVarNodeKind = assNodeVar->GetNodeKind();
 
-					//std::wstring key = g_symTable.ComposeKey(var->GetName(), 1); // TODO: Restructure symbol table.
-					//SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
+				switch (assNodeVarNodeKind)
+				{
+				case Node_k::SymNode:
+				{
+					AST::SymNode* var = (AST::SymNode*)assNodeVar;
+
 					SymTabEntry* entry = var->GetSymTabEntry();
 
 					if (entry == nullptr)
@@ -815,30 +1055,101 @@ namespace Body
 
 					stackLocation = entry->asVar.adress;
 					exprType = entry->asVar.type;
+
+					break;
+				}
+				case Node_k::DerefNode:
+				{
+					AST::DerefNode* derefOp = (AST::DerefNode*)assNodeVar;
+
+					exprType = GetPointeeTypeFromDerefNode(derefOp);
+
+					break;
+				}
 				}
 
-				// Generate operation code. Remember that the temporaries stack section needs to be reset!
-				TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true);
-				// The type and size all temporaries involved in this expression will inherit depends on the type we're assigning to, effectively
-				// handling truncation immediately.
-				GenOpNodeCode(code, asAssNode->GetExpr(), t0, exprType);
+				// Generate operation code. Remember that the temporaries naming scheme needs to be reset!
+				ResetTempsNaming();
+				TempVar t0 = GenOpNodeCode(code, asAssNode->GetExpr());
 
-				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
-				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
-				// Enforce allocation policy(doing the aforementioned resetting).
-				CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+				std::string output;
+
+				switch (assNodeVarNodeKind)
+				{
+				case Node_k::SymNode:
+				{
+					//output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)" +
+					//	"\nmov " + RefLocalVar(stackLocation, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
+					output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)\n" +
+									 PushRegIntoMem(RG::RAX, stackLocation, exprType) + "\n";
+
+					break;
+				}
+
+				case Node_k::DerefNode:
+				{
+					const PrimitiveType pointeeType = exprType;
+
+					/*
+						mov RAX, ptr
+						mov [RAX], t0(holds expr)
+					*/
+
+					AST::DerefNode* asDerefNode = (AST::DerefNode*)assNodeVar;
+					const PrimitiveType pointerType = PrimitiveType::pointer;
+					
+					// Result held in RAX, hence not using t1.
+					TempVar t1 = GenOpNodeCode(code, asDerefNode->GetExpr());
+
+					const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 
 
+#pragma region REFACTORINO
+					// Get the correct version of RCX for pushing RCX -> pointee.
+					// TODO: Refactor.
+					std::string RCXVariant("invalid register");
+					switch (pointeeType)
+					{
+					case PrimitiveType::ui16:
+					case PrimitiveType::i16:
+						RCXVariant = "CX";
+						break;
+
+					case PrimitiveType::ui32:
+					case PrimitiveType::i32:
+						RCXVariant = "ECX";
+						break;
+
+					case PrimitiveType::ui64:
+					case PrimitiveType::i64:
+						RCXVariant = "RCX";
+						break;
+
+					default:
+						break;
+					}
+					if (RCXVariant == "invalid register")
+					{
+						wprintf(L"ERROR: Couldn't find register in " __FUNCTION__ "\n");
+						Exit(ErrCodes::internal_compiler_error);
+					}
+#pragma endregion
 
 
-				// Store result (held in rax and on the temporaries-stack) in var.
-				// TODO: Maybe integrate function name mangling for variable names aswell, so we can write out the variable name instead of stack location.
-				std::string output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)" +
-									 "\nmov " + RefLocalVar(stackLocation, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
+					output = "\n; Copy " + t0.name + " to rcx, as a middle-man\n" +
+									 FetchIntoReg(RG::RCX, t0ActualAdress, pointerType) + "\n"
+									 "mov [RAX], " + RCXVariant + "\n";
+
+
+					break;
+				}
+				}
 
 				code += output;
-				// std::cerr << output;
 
+				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
+				CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+				
 				break;
 			}
 			case Node_k::ReturnNode:
@@ -851,19 +1162,14 @@ namespace Body
 				const PrimitiveType retType = CurrentFunctionMetaData::retType;
 				code += "\n; Return expression(ret_t: " + std::string(PrimitiveTypeReflectionNarrow[(ui16)retType]) + "):\n";
 
-				// Generate operation code. Remember that the temporaries stack section needs to be reset!
-				TempVar t0(AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, true));
-				GenOpNodeCode(code, asReturnNode->GetRetExpr(), t0, retType);
+				// Generate operation code. Remember that the temporaries naming scheme needs to be reset!
+				ResetTempsNaming();
+				TempVar t0 = GenOpNodeCode(code, asReturnNode->GetRetExpr());
 
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
 				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
 
-				// Add some padding.
 				code += "\n\n";
-
-				// TODO: We're no longer generating the epilogue when we return. Instead, if we find a return statement(in an if-statement), stick the result in RAX and GOTO(!)
-				// the epilogue of the function, skipping all the other code in between.
-				// On the other hand, if we find a lone return statement that obscures code after it, we just raise an error.
 
 				break;
 			}
@@ -871,11 +1177,21 @@ namespace Body
 			{
 				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
 				
-				//PrimitiveType funcRetType = g_symTable.RetrieveSymbol(g_symTable.ComposeKey(asFunctionCallNode->GetName(), SymTable::s_globalNamespace))->asFunction.retType;
 				PrimitiveType funcRetType = asFunctionCallNode->GetSymTabEntry()->asFunction.retType;
 				
 				PushArgsIntoRegs(code, asFunctionCallNode);
-				code += "call " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
+
+				code += "\ncall " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
+
+				break;
+			}
+			case Node_k::ForLoopNode:
+			{
+				AST::ForLoopNode* asForLoopNode = (AST::ForLoopNode*)node;
+
+				GenForLoopCode(code, asForLoopNode, largestTempAllocation);
+
+				break;
 			}
 		}
 	
@@ -906,8 +1222,6 @@ namespace Boilerplate
 
 	inline static void GenerateHeader(std::string& code)
 	{
-		//code += ".686P        ; Enable x86 - 64 (64 - bit mode)\n" \
-				".model flat  ; Flat memory model\n";
 		code += "OPTION DOTNAME   ; Allows the use of dot notation(MASM64 requires this for 64 - bit assembly)\n";
 
 		GenerateDataSection(code);
@@ -924,8 +1238,6 @@ namespace Boilerplate
 
 void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 {
-	// Start by generating the boilerplate skeleton once, then generate function code for each function node, then finish by generating the boilerplate
-	// at the bottom of the ASM file.
 	// Note narrowing to narrow string from wide string.
 	std::string boilerplateHeader, boilerplateFooter;
 
@@ -957,7 +1269,8 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 		if (asFunctionNode->GetName() == std::wstring(WideMainFunctionName))
 		{
 			// Stick the main function name (in BCL) in there as a comment.
-			mangledFuncName = "; main (In BCL: " + std::string(NarrowMainFunctionName) + ")\nmain";
+			//mangledFuncName = "; main (In BCL: " + std::string(NarrowMainFunctionName) + ")\nmain";
+			mangledFuncName = "main";
 		}
 		else
 		{
@@ -967,6 +1280,7 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 		}
 		CurrentFunctionMetaData::funcName = mangledFuncName;
 		CurrentFunctionMetaData::retType = asFunctionNode->GetRetType();
+		CurrentFunctionMetaData::currentFunction = asFunctionNode;
 
 		// We need to get the biggest size the stack will ever grow to so we can enforce our allocation policy.
 		// Without this we'd allocate more and more stack size for each expression evaluation, even though temporaries should start back at 0 when evaluating a new expression.

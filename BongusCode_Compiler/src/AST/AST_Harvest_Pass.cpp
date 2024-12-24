@@ -140,22 +140,6 @@ static void ProcessNode(AST::Node* n)
           break;
         }
 
-        //case Node_k::DerefNode:
-        //{
-        //  AST::DerefNode* asDerefNode = (AST::DerefNode*)n;
-        //
-        //  SymTabEntry* entry = symtab.RetrieveSymbol(symtab.ComposeKey(asDerefNode->GetName()));
-        //
-        //  if (entry == nullptr)
-        //  {
-        //    wprintf(L"ERROR: Undeclared symbol \"%s\"\nYou cannot dereference this variable -- it doesn't exist.\n", asDerefNode->GetName().c_str());
-        //    Exit(ErrCodes::undeclared_symbol);
-        //  }
-        //
-        //  asDerefNode->SetSymTabEntry(entry);
-        //
-        //  break;
-        //}
     }
     for (AST::Node* childnode : n->GetChildren())
     {
