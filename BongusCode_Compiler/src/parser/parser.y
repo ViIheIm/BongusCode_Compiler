@@ -151,7 +151,7 @@ function: functionHead scope {
 			if (arg != nullptr)
 			{
 				std::wstring* str = new std::wstring(arg->GetName());
-				AST::Node* declNode = AST::MakeDeclNode(str, arg->GetType());
+				AST::Node* declNode = AST::MakeDeclNode(str, arg->GetType(), arg->GetPointeeType());
 
 				for (const AST::Node* n = arg->GetRightSibling(); n != nullptr; n = n->GetRightSibling())
 				{
@@ -161,7 +161,7 @@ function: functionHead scope {
 					std::wstring* str = new std::wstring(asArgNode->GetName());
 
 					// Create a new declnode and append it to the list by going through the head declNode.
-					declNode->MakeSiblings(AST::MakeDeclNode(str, asArgNode->GetType()));
+					declNode->MakeSiblings(AST::MakeDeclNode(str, asArgNode->GetType(), asArgNode->GetPointeeType()));
 				}
 
 
@@ -198,18 +198,19 @@ scopes: scopes scope				{ $1->MakeSiblings($2); $$ = $1; }
 	  ;
 
 scope: LCURLY stmts RCURLY			{ $$ = AST::MakeScopeNode(); $$->AdoptChildren($2); }
-	 ;
+		 | LCURLY RCURLY						{ $$ = AST::MakeScopeNode(); $$->AdoptChildren(AST::MakeNullNode()); }
+		 ;
 
 stmts: stmts stmt SEMI				{ $$ = $1->MakeSiblings($2); }
 	 | stmt SEMI					{ $$ = $1; }
 	 ;
 
 stmt: expr							{ $$ = $1; }
-	| varDecl							{ $$ = $1; }
-	| varAss							{ $$ = $1; }
-	| returnOp						{ $$ = $1; }
-	| forLoop							{ $$ = $1; }
-	;
+		| varDecl						{ $$ = $1; }
+		| varAss						{ $$ = $1; }
+		| returnOp					{ $$ = $1; }
+		| forLoop						{ $$ = $1; }
+		;
 
 
 // Mathematical expression --------------------------------------------------------------------				
@@ -217,22 +218,22 @@ expr: addExpr						{ $$ = $1; }
 	;
 
 addExpr: addExpr PLUS_OP mulExpr	{ $$ = AST::MakeOpNode(L'+', $1, $3); }
-	   | addExpr MINUS_OP mulExpr	{ $$ = AST::MakeOpNode(L'-', $1, $3); }
-	   | mulExpr
-	   ;
+			 | addExpr MINUS_OP mulExpr	{ $$ = AST::MakeOpNode(L'-', $1, $3); }
+			 | mulExpr
+			 ;
 
 mulExpr: mulExpr MUL_OP factor		{ $$ = AST::MakeOpNode(L'*', $1, $3); }
-	   | mulExpr DIV_OP factor		{ $$ = AST::MakeOpNode(L'/', $1, $3); }
-	   | factor
-	   ;
+			 | mulExpr DIV_OP factor		{ $$ = AST::MakeOpNode(L'/', $1, $3); }
+			 | factor
+			 ;
 
-factor: NUM_LIT						{ $$ = AST::MakeIntNode($1); }
-	  | ID							{ $$ = AST::MakeSymNode($1); }
-	  | LPAREN expr RPAREN			{ $$ = $2; }
-	  | functionCall				{ $$ = $1; }
-		| addrOfOp					{ $$ = $1; }
-		| derefOp						{ $$ = $1; }
-	  ;
+factor: NUM_LIT								{ $$ = AST::MakeIntNode($1); }
+			| ID										{ $$ = AST::MakeSymNode($1); }
+			| LPAREN expr RPAREN		{ $$ = $2; }
+			| functionCall					{ $$ = $1; }
+			| addrOfOp							{ $$ = $1; }
+			| derefOp								{ $$ = $1; }
+			;
 //!Mathematical expression --------------------------------------------------------------------
 
 
@@ -256,8 +257,8 @@ type: KWD_UI16						{ $$ = PrimitiveType::ui16; }
 
 
 // Variable assignment ------------------------------------------------------------------------
-varAss: ID EQ_OP expr				{ $$ = AST::MakeAssNode(AST::MakeSymNode($1) /* <--- Hurr durr */, $3); }
-	  ;
+varAss: lvalue EQ_OP expr				{ $$ = AST::MakeAssNode($1, $3); }
+			;
 //!Variable assignment ------------------------------------------------------------------------
 
 
@@ -307,6 +308,7 @@ value: lvalue
 		 ;
 
 lvalue: ID			{ $$ = AST::MakeSymNode($1); }
+			| derefOp
 			;
 
 rvalue: NUM_LIT	{ $$ = AST::MakeIntNode($1); }
