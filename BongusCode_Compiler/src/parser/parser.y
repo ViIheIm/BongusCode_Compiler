@@ -129,7 +129,7 @@
 
 // Functions & Fwd Decl-----------------------------------------------------------------------
 program: globalEntries				{ g_nodeHead = AST::MakeNullNode(); g_nodeHead->AdoptChildren($1); }
-	   ;
+			 ;
 
 globalEntries: globalEntries globalEntry	{ $1->MakeSiblings($2); $$ = $1; }
 			 | globalEntry
@@ -189,7 +189,7 @@ param: type ID						{ $$ = AST::MakeArgNode($2, $1); }
 
 
 fwdDecl: type ID LPAREN paramList RPAREN SEMI		{ $$ = AST::MakeFwdDeclNode($1, $2, $4); }
-	   ;
+			 ;
 //!Functions & Fwd Decl-----------------------------------------------------------------------
 
 
@@ -215,7 +215,7 @@ stmt: expr							{ $$ = $1; }
 
 // Mathematical expression --------------------------------------------------------------------				
 expr: addExpr						{ $$ = $1; }
-	;
+		;
 
 addExpr: addExpr PLUS_OP mulExpr	{ $$ = AST::MakeOpNode(L'+', $1, $3); }
 			 | addExpr MINUS_OP mulExpr	{ $$ = AST::MakeOpNode(L'-', $1, $3); }
