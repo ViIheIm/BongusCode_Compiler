@@ -75,6 +75,22 @@ static void ProcessNode(AST::Node* n)
             break;
         }
 
+        case Node_k::ExternFwdDeclNode:
+        {
+          AST::ExternFwdDeclNode* asExternFwdDeclNode = (AST::ExternFwdDeclNode*)n;
+          AST::FwdDeclNode* fwdDeclNode = (AST::FwdDeclNode*)asExternFwdDeclNode->GetFwdDeclNode();
+
+          SymTabEntry* entryCandidate = symtab.RetrieveSymbol(symtab.ComposeKey(fwdDeclNode->GetName()));
+          if (entryCandidate == nullptr)
+          {
+            entryCandidate = symtab.EnterSymbol(fwdDeclNode->GetName(), fwdDeclNode->GetRetType(), PrimitiveType::invalid, 0, true);
+          }
+
+          fwdDeclNode->SetSymTabEntry(entryCandidate);
+
+          break;
+        }
+
         case Node_k::FunctionNode:
         {
             AST::FunctionNode* asFunctionNode = (AST::FunctionNode*)n;

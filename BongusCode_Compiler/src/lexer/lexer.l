@@ -36,6 +36,7 @@ KWD_I64				"i64"
 
 KWD_RETURN		"Claudere"
 KWD_FOR				"For"
+KWD_EXTERN		"xenoverse"
 
 ID						[[:alpha:]_][[:alnum:]_]*
 NUM_LIT				0|[1-9][0-9]*
@@ -110,6 +111,10 @@ ADDR_OF_OP		&
 {KWD_FOR}
 	LEXLOG(L"Found KWD_FOR: %s\n", wstr().c_str());
 	return BTok::KWD_FOR;
+
+{KWD_EXTERN}
+	LEXLOG(L"Found KWD_EXTERN: %s\n", wstr().c_str());
+	return BTok::KWD_EXTERN;
 
 {ID}
 	LEXLOG(L"Found ID: %s\n", wstr().c_str());

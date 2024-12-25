@@ -285,6 +285,21 @@ namespace AST
 		Node* argsList;
 	};
 
+	class ExternFwdDeclNode : public Node
+	{
+	public:
+		ExternFwdDeclNode() = default;
+		virtual ~ExternFwdDeclNode() override = default;
+		virtual std::vector<Node*> GetChildren(void) override;
+
+		inline Node* GetFwdDeclNode(void) const { return fwdDeclNode; }
+		friend Node* MakeExternFwdDeclNode(Node*);
+
+	private:
+
+		Node* fwdDeclNode;
+	};
+
 	class AddrOfNode : public Node, public SymTableAccessor
 	{
 	public:
