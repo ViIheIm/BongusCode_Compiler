@@ -379,9 +379,7 @@ namespace Tools
 
 	std::string PushRegIntoMem(const RG reg, const i32 destAdress, const PrimitiveType destType)
 	{
-		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(reg, destType);
-
-		std::string result = movVariant + " " + sizeVariant + " " + std::to_string(destAdress) + "[rsp]" + ", " + regVariant;
+		std::string result = "mov " + GetWordKindFromType(destType) + " " + std::to_string(destAdress) + "[rsp]" + ", " + GetReg(reg, destType);
 
 		return result;
 	}
