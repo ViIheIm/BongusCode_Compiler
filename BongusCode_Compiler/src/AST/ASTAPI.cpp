@@ -196,6 +196,16 @@ AST::Node* AST::MakeFwdDeclNode(PrimitiveType retType, std::wstring* s, Node* ar
     return node;
 }
 
+AST::Node* AST::MakeExternFwdDeclNode(Node* fwdDeclNode)
+{
+  ExternFwdDeclNode* node = new ExternFwdDeclNode();
+  assert(node && "Failed to allocate extern fwd decl node");
+  node->kind = Node_k::ExternFwdDeclNode;
+  node->fwdDeclNode = fwdDeclNode;
+
+  return node;
+}
+
 AST::Node* AST::MakeAddrOfNode(std::wstring* name)
 {
   AddrOfNode* node = new AddrOfNode();
