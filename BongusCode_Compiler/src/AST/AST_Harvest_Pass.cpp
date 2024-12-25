@@ -2,6 +2,7 @@
 #include "ASTNode.h"
 #include "../symbol_table/symtable.h"
 #include "../Exit.h"
+#include "../CStrLib.h"
 #include <typeinfo>
 #include <cassert>
 
@@ -68,6 +69,8 @@ static void ProcessNode(AST::Node* n)
             if (entryCandidate == nullptr)
             {
               entryCandidate = symtab.EnterSymbol(asFwdDeclNode->GetName(), asFwdDeclNode->GetRetType(), PrimitiveType::invalid, 0, true);
+
+              entryCandidate->functionName = MangleFunctionName(asFwdDeclNode->GetName().c_str());
             }
             
             asFwdDeclNode->SetSymTabEntry(entryCandidate);
@@ -84,6 +87,9 @@ static void ProcessNode(AST::Node* n)
           if (entryCandidate == nullptr)
           {
             entryCandidate = symtab.EnterSymbol(fwdDeclNode->GetName(), fwdDeclNode->GetRetType(), PrimitiveType::invalid, 0, true);
+
+            // Just set the pure narrowed name, not the mangled one.
+            entryCandidate->functionName = GetNarrowedString(fwdDeclNode->GetName().c_str());
           }
 
           fwdDeclNode->SetSymTabEntry(entryCandidate);
@@ -101,6 +107,8 @@ static void ProcessNode(AST::Node* n)
             if (entryCandidate == nullptr)
             {
               entryCandidate = symtab.EnterSymbol(asFunctionNode->GetName(), asFunctionNode->GetRetType(), PrimitiveType::invalid, 0, true);
+
+              entryCandidate->functionName = MangleFunctionName(asFunctionNode->GetName().c_str());
             }
 
             asFunctionNode->SetSymTabEntry(entryCandidate);
