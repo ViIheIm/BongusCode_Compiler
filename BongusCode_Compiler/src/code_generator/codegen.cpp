@@ -3,89 +3,11 @@
 #include "../AST/ASTAPI.h"
 #include "../symbol_table/symtable.h"
 #include "../Exit.h"
-#include "../CStrLib.h"
 #include "../Utils.h"
 #include <cassert>
 #include <iostream>
 
-/*
-	Name mangling in bonguscode is like how most C-compilers mangle their names.
-	Firstly, we prepend an underscore.
-	Secondly, and this is the more involved operation;
-	In the case of unicode characters, we expand out the unicode character
-	into a string of it's hex value.
-*/
-constexpr ui16 hexExpansionAmount = 4;
 
-inline static void Mangle(wchar_t* outStr, const ui16 newStrLen)
-{
-	const ui16 newStrByteLen = sizeof(wchar_t) * newStrLen;
-
-	wchar_t* tempMem = (wchar_t*)malloc(newStrByteLen);
-	ZeroMem(tempMem, newStrByteLen);
-
-	// Start by prepending an underscore.
-	wcscpy(tempMem, outStr);
-	*outStr = L'_';
-
-	// Copy everything back.
-	wcscpy(outStr + 1, tempMem);
-
-	// Clear tempMem.
-	ZeroMem(tempMem, newStrByteLen);
-
-
-	for (wchar_t* c = outStr; *c != 0; c++)
-	{
-		// Only mangle unicode characters.
-		if (IsUnicode(*c))
-		{
-			// Copy over everything after c to tempMem.
-			wcscpy(tempMem, c + 1);
-
-			swprintf(c, L"%.*X", hexExpansionAmount, *c);
-
-			// Copy everything after c back.
-			wcscpy(c + hexExpansionAmount, tempMem);
-
-			// Clear tempMem.
-			ZeroMem(tempMem, newStrByteLen);
-
-			// We're not iterating c here because if it's at the end of the string, and there's a unicode character there, it will skip past said character.
-			// Besides, no character we just wrote will be a unicode character, so it's safe to reread characters we just wrote.
-		}
-	}
-}
-
-inline static char* MangleFunctionName(const wchar_t* wstr)
-{
-	// Figure out new size, taking unicode character expansion into account.
-	// It's defaulted to 1 to take leading underscore into account.
-	ui16 newStrLen = 1;
-	for (const wchar_t* c = wstr; *c != 0; c++)
-	{
-		if (IsUnicode(*c))
-		{
-			newStrLen += hexExpansionAmount;
-		}
-		else
-		{
-			newStrLen += 1;
-		}
-	}
-	// Add size for null terminator.
-	newStrLen += 1;
-
-	wchar_t* expandedWideStr = (wchar_t*)malloc(sizeof(wchar_t) * newStrLen);
-	ZeroMem(expandedWideStr, sizeof(wchar_t) * newStrLen);
-	wcscpy(expandedWideStr, wstr);
-	Mangle(expandedWideStr, newStrLen);
-	char* narrowedStr = (char*)malloc(sizeof(char) * newStrLen);
-	NarrowWideString(expandedWideStr, newStrLen, narrowedStr);
-	free(expandedWideStr);
-
-	return narrowedStr;
-}
 
 namespace Registers
 {
@@ -457,9 +379,7 @@ namespace Tools
 
 	std::string PushRegIntoMem(const RG reg, const i32 destAdress, const PrimitiveType destType)
 	{
-		const auto [movVariant, regVariant, sizeVariant] = GetFetchInstructionsForType(reg, destType);
-
-		std::string result = movVariant + " " + sizeVariant + " " + std::to_string(destAdress) + "[rsp]" + ", " + regVariant;
+		std::string result = "mov " + GetWordKindFromType(destType) + " " + std::to_string(destAdress) + "[rsp]" + ", " + GetReg(reg, destType);
 
 		return result;
 	}
@@ -674,7 +594,8 @@ namespace Body
 
 			PushArgsIntoRegs(output, asFunctionCallNode);
 
-			std::string mangledFunctionName = std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()));
+			//std::string mangledFunctionName = std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()));
+			std::string mangledFunctionName = asFunctionCallNode->GetSymTabEntry()->functionName;
 
 			const PrimitiveType funcRetType = asFunctionCallNode->GetSymTabEntry()->asFunction.retType;
 			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(funcRetType), funcRetType);
@@ -1177,11 +1098,14 @@ namespace Body
 			{
 				AST::FunctionCallNode* asFunctionCallNode = (AST::FunctionCallNode*)node;
 				
-				PrimitiveType funcRetType = asFunctionCallNode->GetSymTabEntry()->asFunction.retType;
+				SymTabEntry* entry = asFunctionCallNode->GetSymTabEntry();
+
+				PrimitiveType funcRetType = entry->asFunction.retType;
 				
 				PushArgsIntoRegs(code, asFunctionCallNode);
 
-				code += "\ncall " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
+				//code += "\ncall " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
+				code += "\ncall " + entry->functionName + "\n";
 
 				break;
 			}
@@ -1209,6 +1133,25 @@ namespace Body
 
 namespace Boilerplate
 {
+	inline static std::string GetExternFunctionsList(AST::Node* nodeHead)
+	{
+		std::string result("; External C functions list\n");
+
+		for (AST::Node* childNode : nodeHead->GetChildren())
+		{
+			if (childNode->GetNodeKind() == Node_k::ExternFwdDeclNode)
+			{
+				AST::ExternFwdDeclNode* asExternFwdDeclNode = (AST::ExternFwdDeclNode*)childNode;
+				AST::FwdDeclNode* fwdDeclNode = (AST::FwdDeclNode*)asExternFwdDeclNode->GetFwdDeclNode();
+
+				// The name is mangled in the harvest pass.
+				result += "EXTERN " + fwdDeclNode->GetSymTabEntry()->functionName + " : PROC\n";
+			}
+		}
+
+		return result;
+	}
+
 	// TODO: Generation of the data and code sections should probably be handled differently, and maybe move these out from this namespace.
 	inline static void GenerateDataSection(std::string& code)
 	{
@@ -1220,9 +1163,13 @@ namespace Boilerplate
 		code += ".code\n";
 	}
 
-	inline static void GenerateHeader(std::string& code)
+	inline static void GenerateHeader(AST::Node* nodeHead, std::string& code)
 	{
 		code += "OPTION DOTNAME   ; Allows the use of dot notation(MASM64 requires this for 64 - bit assembly)\n";
+
+		code += "\n\n";
+
+		code += GetExternFunctionsList(nodeHead) + "\n";
 
 		GenerateDataSection(code);
 		GenerateCodeSection(code);
@@ -1241,7 +1188,7 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 	// Note narrowing to narrow string from wide string.
 	std::string boilerplateHeader, boilerplateFooter;
 
-	Boilerplate::GenerateHeader(boilerplateHeader);
+	Boilerplate::GenerateHeader(nodeHead, boilerplateHeader);
 	outCode = boilerplateHeader;
 	//NOTE /\ is assignment, not += !!!!!
 
@@ -1252,6 +1199,7 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 			// childNode is a forward declaration node, skip it.
 			continue;
 		}
+
 		AST::FunctionNode* asFunctionNode = (AST::FunctionNode*)childNode;
 
 		std::string prologue, body, epilogue;
@@ -1274,9 +1222,10 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 		}
 		else
 		{
-			char* nameCStr = MangleFunctionName(asFunctionNode->GetName().c_str());
-			mangledFuncName = std::string(nameCStr);
-			free(nameCStr);
+			//char* nameCStr = MangleFunctionName(asFunctionNode->GetName().c_str());
+			//mangledFuncName = std::string(nameCStr);
+			//free(nameCStr);
+			mangledFuncName = asFunctionNode->GetSymTabEntry()->functionName;
 		}
 		CurrentFunctionMetaData::funcName = mangledFuncName;
 		CurrentFunctionMetaData::retType = asFunctionNode->GetRetType();

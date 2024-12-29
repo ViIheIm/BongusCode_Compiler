@@ -1,5 +1,6 @@
 #pragma once
 #include "Definitions.h"
+#include <string>
 
 /*
   String library tailor made to Clarsveila//Bonguscode
@@ -23,6 +24,9 @@ __forceinline void WidenNarrowString(const char* narrowStr, ui16 strLen, wchar_t
 	for (ui16 i = 0; i < strLen; i++) { outStr[i] = narrowStr[i]; }
 }
 
+// std::string version to get a narrow string from a wide C-string.
+std::string GetNarrowedString(const wchar_t* wideStr);
+
 // We can see if a wide string contains non-ascii characters by checking if the total sum of a wchar is greater than 127(max ascii value).
 __forceinline bool IsStringAscii(const wchar_t* wideStr, ui16 strLen)
 {
@@ -42,3 +46,7 @@ __forceinline bool IsUnicode(wchar_t chr)
 {
 	return chr > 127;
 }
+
+// Name mangler functions.
+void Mangle(wchar_t* outStr, const ui16 newStrLen);
+std::string MangleFunctionName(const wchar_t* wstr);

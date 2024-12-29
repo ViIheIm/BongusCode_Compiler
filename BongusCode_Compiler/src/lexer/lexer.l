@@ -20,43 +20,44 @@ using BTok = yy::parser::token::token_kind_type;
 %option fast
 
 
-COMMENT			"||"[^\n]*
+COMMENT				"||"[^\n]*
 WHITESPACE		[[:space:]]+
 
-KWD_NIHIL		"nihil"
-SYM_PTR			¤
-KWD_UI8			"ui8"
-KWD_I8			"i8"
-KWD_UI16		"ui16"
-KWD_I16			"i16"
-KWD_UI32		"ui32"
-KWD_I32			"i32"
-KWD_UI64		"ui64"
-KWD_I64			"i64"
+KWD_NIHIL			"nihil"
+SYM_PTR				¤
+KWD_UI8				"ui8"
+KWD_I8				"i8"
+KWD_UI16			"ui16"
+KWD_I16				"i16"
+KWD_UI32			"ui32"
+KWD_I32				"i32"
+KWD_UI64			"ui64"
+KWD_I64				"i64"
 
 KWD_RETURN		"Claudere"
 KWD_FOR				"For"
+KWD_EXTERN		"xenoverse"
 
-ID				[[:alpha:]_][[:alnum:]_]*
-NUM_LIT			0|[1-9][0-9]*
+ID						[[:alpha:]_][[:alnum:]_]*
+NUM_LIT				0|[1-9][0-9]*
 
-EQOP			=
-PLUSOP			\+
-MINUSOP			\-
-MULOP			\*
-DIVOP			\/
+EQOP					=
+PLUSOP				\+
+MINUSOP				\-
+MULOP					\*
+DIVOP					\/
 
-LPAREN			\(
-RPAREN			\)
+LPAREN				\(
+RPAREN				\)
 
-LCURLY			\{
-RCURLY			\}
+LCURLY				\{
+RCURLY				\}
 
-SEMI			\.
+SEMI					\.
 RANGE_SYMBOL	⇢
-COMMA			\,
+COMMA					\,
 
-ADDR_OF_OP	&
+ADDR_OF_OP		&
 
 %%
 
@@ -110,6 +111,10 @@ ADDR_OF_OP	&
 {KWD_FOR}
 	LEXLOG(L"Found KWD_FOR: %s\n", wstr().c_str());
 	return BTok::KWD_FOR;
+
+{KWD_EXTERN}
+	LEXLOG(L"Found KWD_EXTERN: %s\n", wstr().c_str());
+	return BTok::KWD_EXTERN;
 
 {ID}
 	LEXLOG(L"Found ID: %s\n", wstr().c_str());

@@ -182,6 +182,7 @@ call $(SolutionDir)src\parser\buildparser.bat</Command>
     <ClCompile Include="AST\AST_Harvest_Pass.cpp" />
     <ClCompile Include="AST\AST_Semantics_Pass.cpp" />
     <ClCompile Include="code_generator\codegen.cpp" />
+    <ClCompile Include="CStrLib.cpp" />
     <ClCompile Include="Exit.cpp" />
     <ClCompile Include="lexer\lexer.cpp" />
     <ClCompile Include="main.cpp" />
