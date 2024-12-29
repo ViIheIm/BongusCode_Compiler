@@ -84,6 +84,8 @@
 
 %token ADDR_OF_OP
 
+%token KWD_EXTERN
+
 %type<ASTNode> globalEntries
 %type<ASTNode> globalEntry
 %type<ASTNode> functions
@@ -91,7 +93,10 @@
 %type<ASTNode> functionHead
 %type<ASTNode> paramList
 %type<ASTNode> param
+
 %type<ASTNode> fwdDecl
+%type<ASTNode> bcplFuncFwdDecl
+%type<ASTNode> externCFuncFwdDecl
 
 %type<ASTNode> scopes
 %type<ASTNode> scope
@@ -129,7 +134,7 @@
 
 // Functions & Fwd Decl-----------------------------------------------------------------------
 program: globalEntries				{ g_nodeHead = AST::MakeNullNode(); g_nodeHead->AdoptChildren($1); }
-	   ;
+			 ;
 
 globalEntries: globalEntries globalEntry	{ $1->MakeSiblings($2); $$ = $1; }
 			 | globalEntry
@@ -137,8 +142,8 @@ globalEntries: globalEntries globalEntry	{ $1->MakeSiblings($2); $$ = $1; }
 
 
 globalEntry: function
-		   | fwdDecl
-		   ;
+					 | fwdDecl
+					 ;
 
 function: functionHead scope {
 			$$ = $1;
@@ -188,8 +193,16 @@ param: type ID						{ $$ = AST::MakeArgNode($2, $1); }
 		 ;
 
 
-fwdDecl: type ID LPAREN paramList RPAREN SEMI		{ $$ = AST::MakeFwdDeclNode($1, $2, $4); }
-	   ;
+fwdDecl: bcplFuncFwdDecl
+			 | externCFuncFwdDecl
+			 ;
+
+bcplFuncFwdDecl: type ID LPAREN paramList RPAREN SEMI							{ $$ = AST::MakeFwdDeclNode($1, $2, $4); }
+							 ;
+
+externCFuncFwdDecl: KWD_EXTERN bcplFuncFwdDecl										{ $$ = AST::MakeExternFwdDeclNode($2); }
+									;
+
 //!Functions & Fwd Decl-----------------------------------------------------------------------
 
 
@@ -215,7 +228,7 @@ stmt: expr							{ $$ = $1; }
 
 // Mathematical expression --------------------------------------------------------------------				
 expr: addExpr						{ $$ = $1; }
-	;
+		;
 
 addExpr: addExpr PLUS_OP mulExpr	{ $$ = AST::MakeOpNode(L'+', $1, $3); }
 			 | addExpr MINUS_OP mulExpr	{ $$ = AST::MakeOpNode(L'-', $1, $3); }

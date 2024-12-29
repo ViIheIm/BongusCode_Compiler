@@ -271,7 +271,8 @@ namespace yy {
     SEMI = 281,                    // SEMI
     RANGE_SYMBOL = 282,            // RANGE_SYMBOL
     COMMA = 283,                   // COMMA
-    ADDR_OF_OP = 284               // ADDR_OF_OP
+    ADDR_OF_OP = 284,              // ADDR_OF_OP
+    KWD_EXTERN = 285               // KWD_EXTERN
       };
       /// Backward compatibility alias (Bison 3.6).
       typedef token_kind_type yytokentype;
@@ -288,7 +289,7 @@ namespace yy {
     {
       enum symbol_kind_type
       {
-        YYNTOKENS = 30, ///< Number of tokens.
+        YYNTOKENS = 31, ///< Number of tokens.
         S_YYEMPTY = -2,
         S_YYEOF = 0,                             // "end of file"
         S_YYerror = 1,                           // error
@@ -320,36 +321,39 @@ namespace yy {
         S_RANGE_SYMBOL = 27,                     // RANGE_SYMBOL
         S_COMMA = 28,                            // COMMA
         S_ADDR_OF_OP = 29,                       // ADDR_OF_OP
-        S_YYACCEPT = 30,                         // $accept
-        S_program = 31,                          // program
-        S_globalEntries = 32,                    // globalEntries
-        S_globalEntry = 33,                      // globalEntry
-        S_function = 34,                         // function
-        S_functionHead = 35,                     // functionHead
-        S_paramList = 36,                        // paramList
-        S_param = 37,                            // param
-        S_fwdDecl = 38,                          // fwdDecl
-        S_scope = 39,                            // scope
-        S_stmts = 40,                            // stmts
-        S_stmt = 41,                             // stmt
-        S_expr = 42,                             // expr
-        S_addExpr = 43,                          // addExpr
-        S_mulExpr = 44,                          // mulExpr
-        S_factor = 45,                           // factor
-        S_varDecl = 46,                          // varDecl
-        S_type = 47,                             // type
-        S_varAss = 48,                           // varAss
-        S_returnOp = 49,                         // returnOp
-        S_forLoop = 50,                          // forLoop
-        S_forLoopHead = 51,                      // forLoopHead
-        S_functionCall = 52,                     // functionCall
-        S_argsList = 53,                         // argsList
-        S_arg = 54,                              // arg
-        S_addrOfOp = 55,                         // addrOfOp
-        S_derefOp = 56,                          // derefOp
-        S_value = 57,                            // value
-        S_lvalue = 58,                           // lvalue
-        S_rvalue = 59                            // rvalue
+        S_KWD_EXTERN = 30,                       // KWD_EXTERN
+        S_YYACCEPT = 31,                         // $accept
+        S_program = 32,                          // program
+        S_globalEntries = 33,                    // globalEntries
+        S_globalEntry = 34,                      // globalEntry
+        S_function = 35,                         // function
+        S_functionHead = 36,                     // functionHead
+        S_paramList = 37,                        // paramList
+        S_param = 38,                            // param
+        S_fwdDecl = 39,                          // fwdDecl
+        S_bcplFuncFwdDecl = 40,                  // bcplFuncFwdDecl
+        S_externCFuncFwdDecl = 41,               // externCFuncFwdDecl
+        S_scope = 42,                            // scope
+        S_stmts = 43,                            // stmts
+        S_stmt = 44,                             // stmt
+        S_expr = 45,                             // expr
+        S_addExpr = 46,                          // addExpr
+        S_mulExpr = 47,                          // mulExpr
+        S_factor = 48,                           // factor
+        S_varDecl = 49,                          // varDecl
+        S_type = 50,                             // type
+        S_varAss = 51,                           // varAss
+        S_returnOp = 52,                         // returnOp
+        S_forLoop = 53,                          // forLoop
+        S_forLoopHead = 54,                      // forLoopHead
+        S_functionCall = 55,                     // functionCall
+        S_argsList = 56,                         // argsList
+        S_arg = 57,                              // arg
+        S_addrOfOp = 58,                         // addrOfOp
+        S_derefOp = 59,                          // derefOp
+        S_value = 60,                            // value
+        S_lvalue = 61,                           // lvalue
+        S_rvalue = 62                            // rvalue
       };
     };
 
@@ -837,9 +841,9 @@ namespace yy {
     /// Constants.
     enum
     {
-      yylast_ = 112,     ///< Last index in yytable_.
-      yynnts_ = 30,  ///< Number of nonterminal symbols.
-      yyfinal_ = 15 ///< Termination state number.
+      yylast_ = 130,     ///< Last index in yytable_.
+      yynnts_ = 32,  ///< Number of nonterminal symbols.
+      yyfinal_ = 20 ///< Termination state number.
     };
 
 
@@ -850,7 +854,7 @@ namespace yy {
 
 
 } // yy
-#line 854 "parser.hpp"
+#line 858 "parser.hpp"
 
 
 

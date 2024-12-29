@@ -52,6 +52,9 @@ namespace AST
 	// makeFwdDeclNode(ret_t, name, argsList) instantiates a forward decl node in a similar manner as to makeFunctionNode.
 	Node* MakeFwdDeclNode(PrimitiveType retType, std::wstring* s, Node* argsListNode);
 
+	// makeExternFwdDeclNode(fwdDeclNode) instantiates a node for a forward declaration for an externally declared function.
+	Node* MakeExternFwdDeclNode(Node* fwdDeclNode);
+
 	// makeAddrOfNode(name) instantiates a node for the address-of operation. Name is assumed to be the name of a valid symbol(variable).
 	Node* MakeAddrOfNode(std::wstring* name);
 

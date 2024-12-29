@@ -142,6 +142,7 @@ enum class Node_k : ui16
 	ArgNode,
 	FunctionCallNode,
 	FwdDeclNode,
+	ExternFwdDeclNode,
 	AddrOfNode,
 	DerefNode,
 	ForLoopNode,

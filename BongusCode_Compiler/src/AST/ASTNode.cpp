@@ -192,6 +192,16 @@ std::vector<AST::Node*> AST::FunctionCallNode::GetChildren(void)
   return res;
 }
 
+std::vector<AST::Node*> AST::ExternFwdDeclNode::GetChildren(void)
+{
+  // Run base implementation first.
+  std::vector<Node*> res = Node::GetChildren();
+
+  res.push_back(fwdDeclNode);
+
+  return res;
+}
+
 std::vector<AST::Node*> AST::DerefNode::GetChildren(void)
 {
   // Run base implementation first.
@@ -231,3 +241,5 @@ std::vector<AST::Node*> AST::ForLoopHeadNode::GetChildren(void)
 
   return res;
 }
+
+

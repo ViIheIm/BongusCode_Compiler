@@ -25,6 +25,9 @@ struct SymTabEntry
 			PrimitiveType retType;
 		} asFunction;
 	};
+
+	// Most likely mangled in the case of bcpl functions, but raw and narrowed in the case of extern C functions.
+	std::string functionName;
 };
 
 /*
