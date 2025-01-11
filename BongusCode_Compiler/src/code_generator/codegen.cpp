@@ -78,8 +78,6 @@ void ProcessLocalsCallback(AST::Node* n, void* args)
 	{
 		AST::DeclNode* asDeclNode = (AST::DeclNode*)n;
 
-		//std::wstring key = g_symTable.ComposeKey(asDeclNode->GetName(), asDeclNode->GetScopeDepth());
-		//SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
 		SymTabEntry* entry = asDeclNode->GetSymTabEntry();
 		entry->asVar.adress = *allocSize;
 

@@ -263,18 +263,18 @@ AST::Node* AST::MakeNullNode()
 
 void AST::DoForAllChildren(Node* parent, void(*callback)(Node*, void*), void* args)
 {
-    // Simulate recursion by simulating the stack growing as parent would change.
-    // I suspect this code is very fickle and frail, so keep you eye on it, because it will break at some point.
-    std::vector<Node*> parents{ parent };
+  // Simulate recursion by simulating the stack growing as parent would change.
+  // I suspect this code is very fickle and frail, so keep you eye on it, because it will break at some point.  
+  std::vector<Node*> parents{ parent };
 
-    for (i32 i = 0; i < parents.size(); i++)
+  for (i32 i = 0; i < parents.size(); i++)
+  {
+    for (Node* n : parents[i]->GetChildren())
     {
-        for (Node* n = parents[i]->lmostChild; n != nullptr; n = n->rSibling)
-        {
-            parents.push_back(n);
-            callback(n, args);
-        }
+      parents.push_back(n);
+      callback(n, args);
     }
+  }
 }
 
 std::vector<AST::Node*> AST::GetAllChildrenRecursively(Node* parent)
