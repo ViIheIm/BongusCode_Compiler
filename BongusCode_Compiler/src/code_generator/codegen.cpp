@@ -800,7 +800,7 @@ namespace Body
 		GenerateFunctionBody(code, node->GetBody(), largestTempAllocation);
 
 		// Jump back to head after executing an iteration.
-		code += "jmp SHORT " + headLabel + "\n";
+		code += "jmp " + headLabel + "\n";
 
 		// Place the exit label.
 		code += exitLabel + ":\n";
