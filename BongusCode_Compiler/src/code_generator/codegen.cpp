@@ -751,9 +751,10 @@ namespace Body
 		const std::string& exitLabel
 	)
 	{
-		const ui32 actualAddress = CurrentFunctionMetaData::varsStackSectionSize + iterVar.adress;
+		const i32 actualAddress = GetAdressOfTemporary(iterVar);
 		GenAssignmentToStackMem(code, node->GetLowerBound(), actualAddress, iterVarType);
-	
+
+
 		// Now we must generate the jump instruction.
 		code += "\njmp SHORT " + bodyLabel + "\n";
 
