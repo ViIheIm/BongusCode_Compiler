@@ -756,7 +756,7 @@ namespace Body
 
 
 		// Now we must generate the jump instruction.
-		code += "\njmp SHORT " + bodyLabel + "\n";
+		code += "\njmp " + bodyLabel + "\n";
 
 		// And then for the actual head, where we increment the iter variable.
 
@@ -800,7 +800,7 @@ namespace Body
 		GenerateFunctionBody(code, node->GetBody(), largestTempAllocation);
 
 		// Jump back to head after executing an iteration.
-		code += "jmp SHORT " + headLabel + "\n";
+		code += "jmp " + headLabel + "\n";
 
 		// Place the exit label.
 		code += exitLabel + ":\n";
