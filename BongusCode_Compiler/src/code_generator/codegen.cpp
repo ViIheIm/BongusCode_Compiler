@@ -933,7 +933,6 @@ namespace Body
 			case Node_k::OpNode:
 			{
 				// This is just a lone op node without assignment, but we'll perform the evaluation.
-				// Because of this, we're supplying the default type.
 				ResetTempsNaming();
 				TempVar t0 = GenOpNodeCode(code, node);
 				
@@ -998,8 +997,6 @@ namespace Body
 				{
 				case Node_k::SymNode:
 				{
-					//output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)" +
-					//	"\nmov " + RefLocalVar(stackLocation, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
 					output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)\n" +
 									 PushRegIntoMem(RG::RAX, stackLocation, exprType) + "\n";
 
@@ -1103,7 +1100,6 @@ namespace Body
 				
 				PushArgsIntoRegs(code, asFunctionCallNode);
 
-				//code += "\ncall " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
 				code += "\ncall " + entry->functionName + "\n";
 
 				break;
@@ -1151,7 +1147,6 @@ namespace Boilerplate
 		return result;
 	}
 
-	// TODO: Generation of the data and code sections should probably be handled differently, and maybe move these out from this namespace.
 	inline static void GenerateDataSection(std::string& code)
 	{
 		code += ".data\n\n\n";
@@ -1215,15 +1210,10 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 		std::string mangledFuncName;
 		if (asFunctionNode->GetName() == std::wstring(WideMainFunctionName))
 		{
-			// Stick the main function name (in BCL) in there as a comment.
-			//mangledFuncName = "; main (In BCL: " + std::string(NarrowMainFunctionName) + ")\nmain";
 			mangledFuncName = "main";
 		}
 		else
 		{
-			//char* nameCStr = MangleFunctionName(asFunctionNode->GetName().c_str());
-			//mangledFuncName = std::string(nameCStr);
-			//free(nameCStr);
 			mangledFuncName = asFunctionNode->GetSymTabEntry()->functionName;
 		}
 		CurrentFunctionMetaData::funcName = mangledFuncName;
