@@ -50,3 +50,6 @@ __forceinline bool IsUnicode(wchar_t chr)
 // Name mangler functions.
 void Mangle(wchar_t* outStr, const ui16 newStrLen);
 std::string MangleFunctionName(const wchar_t* wstr);
+
+// Alias
+#define MangleName MangleFunctionName
