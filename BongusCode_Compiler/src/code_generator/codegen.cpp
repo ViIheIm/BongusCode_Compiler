@@ -774,7 +774,7 @@ namespace Body
 		GenForLoopHeadComparison(code, node->GetUpperBound(), exitLabel, actualAddress, iterVarType);
 	}
 
-	void GenerateFunctionBody(std::string& code, AST::Node* node, i32* const largestTempAllocation);
+	void GenerateFunctionBody(std::string& code, AST::Node* node, i32* const largestTempAllocation, const i32 reservedMem);
 
 	inline static void GenForLoopCode(std::string& code, AST::ForLoopNode* node, i32* const largestTempAllocation)
 	{
@@ -797,7 +797,10 @@ namespace Body
 
 		// Generate body
 		code += bodyLabel + ":\n";
-		GenerateFunctionBody(code, node->GetBody(), largestTempAllocation);
+		// Important -- This ensures that when GenerateFunctionBody clears the temporaries section, it doesn't completely clear
+		// everything, including our iter variable, instead clearing everything up until the iter variable.
+		const i32 reservedMemSize = GetSizeFromType(iterVarType);
+		GenerateFunctionBody(code, node->GetBody(), largestTempAllocation, reservedMemSize);
 
 		// Jump back to head after executing an iteration.
 		code += "jmp " + headLabel + "\n";
@@ -917,13 +920,18 @@ namespace Body
 		}
 	}
 	
-	void GenerateFunctionBody(std::string& code, AST::Node* node, i32* const largestTempAllocation)
+	void GenerateFunctionBody(std::string& code, AST::Node* node, i32* const largestTempAllocation, const i32 reservedMem)
 	{
-		auto gatherLargestAllocation = [](i32* const out, i32 newAllocSize) -> void {
+		auto gatherLargestAllocation = [](i32* const out, const i32 newAllocSize) -> void {
 			if (newAllocSize > *out)
 			{
 				*out = newAllocSize;
 			}
+		};
+
+		auto enforceAllocationPolicy = [](const auto gatherLargestAllocation, i32* const largestTempAllocation, i32* const temporariesStack, const i32 reservedMem) -> void {
+			gatherLargestAllocation(largestTempAllocation, *temporariesStack);
+			*temporariesStack = reservedMem;
 		};
 
 		visitedNodes.push_back(node);
@@ -937,10 +945,10 @@ namespace Body
 				TempVar t0 = GenOpNodeCode(code, node);
 				
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
-				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
+				//gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
 				// Enforce allocation policy.
-				CurrentFunctionMetaData::temporariesStackSectionSize = 0;
-
+				//CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+				enforceAllocationPolicy(gatherLargestAllocation, largestTempAllocation, &CurrentFunctionMetaData::temporariesStackSectionSize, reservedMem);
 
 
 
@@ -1064,8 +1072,9 @@ namespace Body
 
 				code += output;
 
-				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
-				CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+				//gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
+				//CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+				enforceAllocationPolicy(gatherLargestAllocation, largestTempAllocation, &CurrentFunctionMetaData::temporariesStackSectionSize, reservedMem);
 				
 				break;
 			}
@@ -1110,6 +1119,8 @@ namespace Body
 
 				GenForLoopCode(code, asForLoopNode, largestTempAllocation);
 
+				enforceAllocationPolicy(gatherLargestAllocation, largestTempAllocation, &CurrentFunctionMetaData::temporariesStackSectionSize, reservedMem);
+
 				break;
 			}
 		}
@@ -1121,7 +1132,7 @@ namespace Body
 			{
 				continue;
 			}
-			GenerateFunctionBody(code, child, largestTempAllocation);
+			GenerateFunctionBody(code, child, largestTempAllocation, reservedMem);
 		}
 	}
 }
@@ -1226,7 +1237,7 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 
 		body = "\n\n\n; Body\n";
 		Body::RetrieveArgs(body, asFunctionNode);
-		Body::GenerateFunctionBody(body, childNode, &largestTemporariesAlloc);
+		Body::GenerateFunctionBody(body, childNode, &largestTemporariesAlloc, 0);
 
 		CurrentFunctionMetaData::temporariesStackSectionSize = largestTemporariesAlloc;
 
