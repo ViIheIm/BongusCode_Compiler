@@ -4,6 +4,7 @@
 #include "../symbol_table/symtable.h"
 #include "../Exit.h"
 #include "../Utils.h"
+#include "../CStrLib.h"
 #include <cassert>
 #include <iostream>
 
@@ -575,7 +576,7 @@ namespace Body
 			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(entry->asVar.type), entry->asVar.type);
 			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 
-			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
+			std::string output = "\n; " + t0.name + " = " + MangleName(asSymNode->GetName().c_str()) + "\n" +
 													 FetchIntoReg(RG::RAX, entry->asVar.adress, t0.type) + "\n" +
 													 PushRegIntoMem(RG::RAX, t0ActualAdress, t0.type);
 
@@ -617,7 +618,7 @@ namespace Body
 			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(addrOfNodeExprType), addrOfNodeExprType);
 
 			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
-			std::string output = "\n; " + t0.name + " = (addr of local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
+			std::string output = "\n; " + t0.name + " = &" + MangleName(asAddrOfNode->GetName().c_str()) + "\n" +
 													 OperateOnReg(RG::RAX, "lea", entry->asVar.adress, addrOfNodeExprType) + "\n" +
 													 PushRegIntoMem(RG::RAX, t0ActualAdress, addrOfNodeExprType);
 
@@ -1005,7 +1006,9 @@ namespace Body
 				{
 				case Node_k::SymNode:
 				{
-					output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)\n" +
+					AST::SymNode* asSymNode = (AST::SymNode*)assNodeVar;
+
+					output = "\n; " + MangleName(asSymNode->GetName().c_str()) + " = Result of expr(rax)\n" +
 									 PushRegIntoMem(RG::RAX, stackLocation, exprType) + "\n";
 
 					break;
