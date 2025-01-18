@@ -118,24 +118,15 @@ namespace AST
 		virtual std::vector<Node*> GetChildren(void) override;
 		inline Node* GetLHS(void) const { return lhs; }
 		inline Node* GetRHS(void) const { return rhs; }
-		inline const wchar_t GetOp(void) const { return op; }
+		inline const Op_k GetOp(void) const { return op; }
 		
-		// Overload that returns a narrow string version.
-		inline std::string GetOpAsString(void) const
-		{
-			char buf[2] = { 0, 0 };
-			buf[0] = (char)op;
-
-			return std::string(buf);
-		}
-
-		friend Node* MakeOpNode(wchar_t, Node*, Node*);
+		friend Node* MakeOpNode(const Op_k, Node*, Node*);
 
 	private:
 
 		Node* lhs;
 		Node* rhs;
-		wchar_t op;
+		Op_k op;
 	};
 
 

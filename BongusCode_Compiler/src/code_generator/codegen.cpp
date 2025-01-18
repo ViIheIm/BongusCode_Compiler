@@ -482,7 +482,7 @@ namespace Body
 		case Node_k::OpNode:
 		{
 			AST::OpNode* asOpNode = (AST::OpNode*)node;
-			std::string opString = asOpNode->GetOpAsString();
+			const Op_k op = asOpNode->GetOp();
 	
 
 			TempVar t0 = GenOpNodeCode(code, asOpNode->GetLHS());
@@ -494,33 +494,42 @@ namespace Body
 			const i32 t1ActualAdress = GetAdressOfTemporary(t1);
 			const PrimitiveType t1Type = t1.type;
 
-			if (opString == "+")
+			switch (op)
+			{
+			// Arithmetical operators.
+			case Op_k::ADD:
 			{
 				std::string output = "\n; " + t0.name + " += " + t1.name + "\n" +
-														 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
-														 OperateOnReg(RG::RAX, "add", t1ActualAdress, t1Type) + "\n" +
-														 PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+					OperateOnReg(RG::RAX, "add", t1ActualAdress, t1Type) + "\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
 				code += output;
+
+				break;
 			}
-			if (opString == "-")
+			case Op_k::SUB:
 			{
 				std::string output = "\n; " + t0.name + " -= " + t1.name + "\n" +
-														 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
-														 OperateOnReg(RG::RAX, "sub", t1ActualAdress, t1Type) + "\n" +
-														 PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+					OperateOnReg(RG::RAX, "sub", t1ActualAdress, t1Type) + "\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
 
 				code += output;
+
+				break;
 			}
-			else if (opString == "*")
+			case Op_k::MUL:
 			{
 				std::string output = "\n; " + t0.name + " *= " + t1.name + "\n" +
-														 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
-														 OperateOnReg(RG::RAX, "imul", t1ActualAdress, t1Type) + "\n" +
-														 PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+					OperateOnReg(RG::RAX, "imul", t1ActualAdress, t1Type) + "\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
 
 				code += output;
+
+				break;
 			}
-			else if (opString == "/")
+			case Op_k::DIV:
 			{
 				// TODO: Division is anal. Here's a guide:
 				// https://www.youtube.com/watch?v=vwTYM0oSwjg
@@ -530,14 +539,70 @@ namespace Body
 				//const std::string& RDX = GetReg(RG::RDX, exprType);
 
 				std::string output = "\n; " + t0.name + " /= " + t1.name + "\n" +
-														 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +									// Store _tfirst in eax
-														 FetchIntoReg(RG::RBX, t1ActualAdress, t1Type) + "\n" +									// Store divisor in rbx
-														 "xor RDX, RDX\n" +																											// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
-														 "div RBX\n" +																													// Perform operation in ebx
-														 FetchImmediateIntoReg(RG::RBX, "3405691582 ; 0xCAFEBABE") + "\n" +			// Store sentinel value CAFEBABE in rbx in case of bugs.
-														 FetchImmediateIntoReg(RG::RDX, "4276993775 ; 0xFEEDBEEF") + "\n" +			// Do the same for rdx with FEEDBEEF since it was also used.
-														 PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);												// Store result in _tfirst on stack
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +									// Store _tfirst in eax
+					FetchIntoReg(RG::RBX, t1ActualAdress, t1Type) + "\n" +									// Store divisor in rbx
+					"xor RDX, RDX\n" +																											// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
+					"div RBX\n" +																														// Perform operation in ebx
+					FetchImmediateIntoReg(RG::RBX, "3405691582 ; 0xCAFEBABE") + "\n" +			// Store sentinel value CAFEBABE in rbx in case of bugs.
+					FetchImmediateIntoReg(RG::RDX, "4276993775 ; 0xFEEDBEEF") + "\n" +			// Do the same for rdx with FEEDBEEF since it was also used.
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);												// Store result in _tfirst on stack
 				code += output;
+
+				break;
+			}
+
+			// Bitwise operators.
+			case Op_k::SHL:
+			{
+				// We must first bring in the amount to shift left into RCX, because bitshifting left and right, we can't simply
+				// do "shl eax, DWORD PTR n[rsp]" from memory like we can with say add or sub.
+				std::string output = "\n; Bring in amount to shift left by into RCX(" + t1.name + ")\n" \
+					"xor RCX, RCX\n" + // Null out
+					FetchIntoReg(RG::RCX, t1ActualAdress, t1Type) + "\n" \
+					"; " + t0.name + " <<= " + t1.name + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" \
+					"shl RAX, CL\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+
+				code += output;
+
+				break;
+			}
+			case Op_k::SHR:
+			{
+				// Same case as above
+				std::string output = "\n; Bring in amount to shift right by into RCX(" + t1.name + ")\n" \
+					"xor RCX, RCX\n" + // Null out
+					FetchIntoReg(RG::RCX, t1ActualAdress, t1Type) + "\n" \
+					"; " + t0.name + " >>= " + t1.name + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" \
+					"shr RAX, CL\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+
+				code += output;
+
+				break;
+			}
+			case Op_k::AND:
+			{
+				std::string output = "\n; " + t0.name + " &= " + t1.name + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+					OperateOnReg(RG::RAX, "and", t1ActualAdress, t1Type) + "\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+				code += output;
+
+				break;
+			}
+			case Op_k::OR:
+			{
+				std::string output = "\n; " + t0.name + " |= " + t1.name + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+					OperateOnReg(RG::RAX, "or", t1ActualAdress, t1Type) + "\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+				code += output;
+
+				break;
+			}
 			}
 
 			return t0;

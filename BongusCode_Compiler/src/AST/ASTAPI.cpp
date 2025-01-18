@@ -26,7 +26,7 @@ AST::Node* AST::MakeSymNode(std::wstring* s)
     return node;
 }
 
-AST::Node* AST::MakeOpNode(wchar_t op, Node* lhs, Node* rhs)
+AST::Node* AST::MakeOpNode(const Op_k op, Node* lhs, Node* rhs)
 {
     OpNode* node = new OpNode();
     assert(node && "Failed to allocate op node");
