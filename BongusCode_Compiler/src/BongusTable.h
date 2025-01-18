@@ -148,3 +148,21 @@ enum class Node_k : ui16
 	ForLoopNode,
 	ForLoopHeadNode,
 };
+
+
+// Operator kind.
+enum class Op_k : ui16
+{
+	// Arithmetical
+	EQ,
+	ADD,
+	SUB,
+	MUL,
+	DIV,
+
+	// Bitwise
+	SHL,
+	SHR,
+	AND,
+	OR,
+};

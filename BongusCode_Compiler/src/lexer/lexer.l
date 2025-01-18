@@ -46,6 +46,10 @@ PLUSOP				\+
 MINUSOP				\-
 MULOP					\*
 DIVOP					\/
+SHL_OP				⪦
+SHR_OP				⪧
+AND_OP				∧
+OR_OP					∨
 
 LPAREN				\(
 RPAREN				\)
@@ -153,6 +157,14 @@ ADDR_OF_OP		&
 {DIVOP}
 	LEXLOG(L"Found DIV_OP: %s\n", wstr().c_str());
 	return BTok::DIV_OP;
+
+{SHL_OP} return BTok::SHL_OP;
+
+{SHR_OP} return BTok::SHR_OP;
+
+{AND_OP} return BTok::AND_OP;
+
+{OR_OP} return BTok::OR_OP;
 
 {LPAREN}
 	LEXLOG(L"Found LPAREN: %s\n", wstr().c_str());
