@@ -842,7 +842,7 @@ namespace Body
 
 	void GenerateFunctionBody(std::string& code, AST::Node* node, i32* const largestTempAllocation, const i32 reservedMem);
 
-	inline static void GenForLoopCode(std::string& code, AST::ForLoopNode* node, i32* const largestTempAllocation)
+	inline static void GenForLoopCode(std::string& code, AST::ForLoopNode* node, i32* const largestTempAllocation, const i32 reservedMem)
 	{
 		// The iter var(typically i in C/C++ for loops) will be maintained as a temporary variable.
 		const PrimitiveType iterVarType = PrimitiveType::ui64;
@@ -865,7 +865,7 @@ namespace Body
 		code += bodyLabel + ":\n";
 		// Important -- This ensures that when GenerateFunctionBody clears the temporaries section, it doesn't completely clear
 		// everything, including our iter variable, instead clearing everything up until the iter variable.
-		const i32 reservedMemSize = GetSizeFromType(iterVarType);
+		const i32 reservedMemSize = GetSizeFromType(iterVarType) + reservedMem;
 		GenerateFunctionBody(code, node->GetBody(), largestTempAllocation, reservedMemSize);
 
 		// Jump back to head after executing an iteration.
@@ -1185,7 +1185,7 @@ namespace Body
 			{
 				AST::ForLoopNode* asForLoopNode = (AST::ForLoopNode*)node;
 
-				GenForLoopCode(code, asForLoopNode, largestTempAllocation);
+				GenForLoopCode(code, asForLoopNode, largestTempAllocation, reservedMem);
 
 				enforceAllocationPolicy(gatherLargestAllocation, largestTempAllocation, &CurrentFunctionMetaData::temporariesStackSectionSize, reservedMem);
 
