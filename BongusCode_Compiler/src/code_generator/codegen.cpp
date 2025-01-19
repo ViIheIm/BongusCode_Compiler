@@ -804,7 +804,7 @@ namespace Body
 		// Now it's time to compare with the iter variable and jump if greater than or equal to.
 		const std::string iterVarString = GetWordKindFromType(iterVarType) + " " + std::to_string(iterVarAddress) + "[rsp]";
 		code += "\ncmp " + iterVarString + ", " + GetReg(RG::RAX, iterVarType) +
-						"\njge SHORT " + labelToJumpTo + "\n";
+						"\njge " + labelToJumpTo + "\n";
 	}
 
 	inline static void GenForLoopHeadCode(
@@ -908,7 +908,7 @@ namespace Body
 			}
 			default:
 			{
-				wprintf(L"ERROR: No type deducible from node n in " __FUNCSIG__ "\n");
+				wprintf(L"ERROR: No type deducible from node n in " __FUNCTION__ "\n");
 				Exit(ErrCodes::unknown_type);
 				break;
 			}
