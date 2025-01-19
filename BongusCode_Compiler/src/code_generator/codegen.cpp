@@ -1177,7 +1177,21 @@ namespace Body
 				
 				PushArgsIntoRegs(code, asFunctionCallNode);
 
+				// Align the stack by a multiple of 16 when calling external functions(not necessary for BC:PL calls, but is for external libc calls.
+				// Todo: will probably need to be bigger than 16 bytes in the future.
+				const i32 alignmentPadding = 16;
+				std::string alignmentPaddingString = std::to_string(alignmentPadding);
+				if (entry->asFunction.isExtern)
+				{
+					code += "\n; Align by " + alignmentPaddingString + " (16 byte alignment is a requirement for extern calls)\n" \
+									"sub RSP, " + alignmentPaddingString;
+				}
 				code += "\ncall " + entry->functionName + "\n";
+				if (entry->asFunction.isExtern)
+				{
+					code += "; Maintain alignment\n" \
+									"add RSP, " + alignmentPaddingString + "\n";
+				}
 
 				break;
 			}

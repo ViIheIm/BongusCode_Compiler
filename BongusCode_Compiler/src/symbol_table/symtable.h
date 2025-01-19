@@ -23,6 +23,7 @@ struct SymTabEntry
 		struct
 		{
 			PrimitiveType retType;
+			bool isExtern;
 		} asFunction;
 	};
 
@@ -59,7 +60,7 @@ public:
 	std::wstring ComposeKey(const std::wstring& name);
 	std::wstring ComposeGlobalKey(const std::wstring& name);
 
-	SymTabEntry* EnterSymbol(const std::wstring& name, const PrimitiveType type, const PrimitiveType pointeeType, ui32 size, const bool isFunction);
+	SymTabEntry* EnterSymbol(const std::wstring& name, const PrimitiveType type, const PrimitiveType pointeeType, ui32 size, const bool isFunction, const bool isExtern);
 
 	// The key here should be composed with ComposeKey already.
 	SymTabEntry* RetrieveSymbol(const std::wstring& composedKey);
