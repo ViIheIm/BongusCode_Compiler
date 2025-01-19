@@ -39,7 +39,7 @@ std::wstring SymTable::ComposeGlobalKey(const std::wstring& name)
 	return s_globalNamespace + L"." + name;
 }
 
-SymTabEntry* SymTable::EnterSymbol(const std::wstring& name, const PrimitiveType type, const PrimitiveType pointeeType, ui32 size, const bool isFunction)
+SymTabEntry* SymTable::EnterSymbol(const std::wstring& name, const PrimitiveType type, const PrimitiveType pointeeType, ui32 size, const bool isFunction, const bool isExtern)
 {
 	SymTabEntry entry;
 	entry.name = name;
@@ -47,6 +47,7 @@ SymTabEntry* SymTable::EnterSymbol(const std::wstring& name, const PrimitiveType
 	if (isFunction)
 	{
 		entry.asFunction.retType = type;
+		entry.asFunction.isExtern = isExtern;
 	}
 	else // It's a variable
 	{
