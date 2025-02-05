@@ -4,6 +4,7 @@
 #include "../symbol_table/symtable.h"
 #include "../Exit.h"
 #include "../Utils.h"
+#include "../CStrLib.h"
 #include <cassert>
 #include <iostream>
 
@@ -78,8 +79,6 @@ void ProcessLocalsCallback(AST::Node* n, void* args)
 	{
 		AST::DeclNode* asDeclNode = (AST::DeclNode*)n;
 
-		//std::wstring key = g_symTable.ComposeKey(asDeclNode->GetName(), asDeclNode->GetScopeDepth());
-		//SymTabEntry* entry = g_symTable.RetrieveSymbol(key);
 		SymTabEntry* entry = asDeclNode->GetSymTabEntry();
 		entry->asVar.adress = *allocSize;
 
@@ -483,7 +482,7 @@ namespace Body
 		case Node_k::OpNode:
 		{
 			AST::OpNode* asOpNode = (AST::OpNode*)node;
-			std::string opString = asOpNode->GetOpAsString();
+			const Op_k op = asOpNode->GetOp();
 	
 
 			TempVar t0 = GenOpNodeCode(code, asOpNode->GetLHS());
@@ -495,33 +494,42 @@ namespace Body
 			const i32 t1ActualAdress = GetAdressOfTemporary(t1);
 			const PrimitiveType t1Type = t1.type;
 
-			if (opString == "+")
+			switch (op)
+			{
+			// Arithmetical operators.
+			case Op_k::ADD:
 			{
 				std::string output = "\n; " + t0.name + " += " + t1.name + "\n" +
-														 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
-														 OperateOnReg(RG::RAX, "add", t1ActualAdress, t1Type) + "\n" +
-														 PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+					OperateOnReg(RG::RAX, "add", t1ActualAdress, t1Type) + "\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
 				code += output;
+
+				break;
 			}
-			if (opString == "-")
+			case Op_k::SUB:
 			{
 				std::string output = "\n; " + t0.name + " -= " + t1.name + "\n" +
-														 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
-														 OperateOnReg(RG::RAX, "sub", t1ActualAdress, t1Type) + "\n" +
-														 PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+					OperateOnReg(RG::RAX, "sub", t1ActualAdress, t1Type) + "\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
 
 				code += output;
+
+				break;
 			}
-			else if (opString == "*")
+			case Op_k::MUL:
 			{
 				std::string output = "\n; " + t0.name + " *= " + t1.name + "\n" +
-														 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
-														 OperateOnReg(RG::RAX, "imul", t1ActualAdress, t1Type) + "\n" +
-														 PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+					OperateOnReg(RG::RAX, "imul", t1ActualAdress, t1Type) + "\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
 
 				code += output;
+
+				break;
 			}
-			else if (opString == "/")
+			case Op_k::DIV:
 			{
 				// TODO: Division is anal. Here's a guide:
 				// https://www.youtube.com/watch?v=vwTYM0oSwjg
@@ -531,14 +539,70 @@ namespace Body
 				//const std::string& RDX = GetReg(RG::RDX, exprType);
 
 				std::string output = "\n; " + t0.name + " /= " + t1.name + "\n" +
-														 FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +									// Store _tfirst in eax
-														 FetchIntoReg(RG::RBX, t1ActualAdress, t1Type) + "\n" +									// Store divisor in rbx
-														 "xor RDX, RDX\n" +																											// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
-														 "div RBX\n" +																													// Perform operation in ebx
-														 FetchImmediateIntoReg(RG::RBX, "3405691582 ; 0xCAFEBABE") + "\n" +			// Store sentinel value CAFEBABE in rbx in case of bugs.
-														 FetchImmediateIntoReg(RG::RDX, "4276993775 ; 0xFEEDBEEF") + "\n" +			// Do the same for rdx with FEEDBEEF since it was also used.
-														 PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);												// Store result in _tfirst on stack
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +									// Store _tfirst in eax
+					FetchIntoReg(RG::RBX, t1ActualAdress, t1Type) + "\n" +									// Store divisor in rbx
+					"xor RDX, RDX\n" +																											// You have to make sure to 0 out rdx first, or else you get an integer underflow :P.
+					"div RBX\n" +																														// Perform operation in ebx
+					FetchImmediateIntoReg(RG::RBX, "3405691582 ; 0xCAFEBABE") + "\n" +			// Store sentinel value CAFEBABE in rbx in case of bugs.
+					FetchImmediateIntoReg(RG::RDX, "4276993775 ; 0xFEEDBEEF") + "\n" +			// Do the same for rdx with FEEDBEEF since it was also used.
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);												// Store result in _tfirst on stack
 				code += output;
+
+				break;
+			}
+
+			// Bitwise operators.
+			case Op_k::SHL:
+			{
+				// We must first bring in the amount to shift left into RCX, because bitshifting left and right, we can't simply
+				// do "shl eax, DWORD PTR n[rsp]" from memory like we can with say add or sub.
+				std::string output = "\n; Bring in amount to shift left by into RCX(" + t1.name + ")\n" \
+					"xor RCX, RCX\n" + // Null out
+					FetchIntoReg(RG::RCX, t1ActualAdress, t1Type) + "\n" \
+					"; " + t0.name + " <<= " + t1.name + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" \
+					"shl RAX, CL\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+
+				code += output;
+
+				break;
+			}
+			case Op_k::SHR:
+			{
+				// Same case as above
+				std::string output = "\n; Bring in amount to shift right by into RCX(" + t1.name + ")\n" \
+					"xor RCX, RCX\n" + // Null out
+					FetchIntoReg(RG::RCX, t1ActualAdress, t1Type) + "\n" \
+					"; " + t0.name + " >>= " + t1.name + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" \
+					"shr RAX, CL\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+
+				code += output;
+
+				break;
+			}
+			case Op_k::AND:
+			{
+				std::string output = "\n; " + t0.name + " &= " + t1.name + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+					OperateOnReg(RG::RAX, "and", t1ActualAdress, t1Type) + "\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+				code += output;
+
+				break;
+			}
+			case Op_k::OR:
+			{
+				std::string output = "\n; " + t0.name + " |= " + t1.name + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+					OperateOnReg(RG::RAX, "or", t1ActualAdress, t1Type) + "\n" +
+					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+				code += output;
+
+				break;
+			}
 			}
 
 			return t0;
@@ -577,7 +641,7 @@ namespace Body
 			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(entry->asVar.type), entry->asVar.type);
 			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 
-			std::string output = "\n; " + t0.name + " = (local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
+			std::string output = "\n; " + t0.name + " = " + MangleName(asSymNode->GetName().c_str()) + "\n" +
 													 FetchIntoReg(RG::RAX, entry->asVar.adress, t0.type) + "\n" +
 													 PushRegIntoMem(RG::RAX, t0ActualAdress, t0.type);
 
@@ -619,7 +683,7 @@ namespace Body
 			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(addrOfNodeExprType), addrOfNodeExprType);
 
 			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
-			std::string output = "\n; " + t0.name + " = (addr of local var at stackLoc " + std::to_string(entry->asVar.adress) + ")\n" +
+			std::string output = "\n; " + t0.name + " = &" + MangleName(asAddrOfNode->GetName().c_str()) + "\n" +
 													 OperateOnReg(RG::RAX, "lea", entry->asVar.adress, addrOfNodeExprType) + "\n" +
 													 PushRegIntoMem(RG::RAX, t0ActualAdress, addrOfNodeExprType);
 
@@ -740,7 +804,7 @@ namespace Body
 		// Now it's time to compare with the iter variable and jump if greater than or equal to.
 		const std::string iterVarString = GetWordKindFromType(iterVarType) + " " + std::to_string(iterVarAddress) + "[rsp]";
 		code += "\ncmp " + iterVarString + ", " + GetReg(RG::RAX, iterVarType) +
-						"\njge SHORT " + labelToJumpTo + "\n";
+						"\njge " + labelToJumpTo + "\n";
 	}
 
 	inline static void GenForLoopHeadCode(
@@ -753,11 +817,12 @@ namespace Body
 		const std::string& exitLabel
 	)
 	{
-		const ui32 actualAddress = CurrentFunctionMetaData::varsStackSectionSize + iterVar.adress;
+		const i32 actualAddress = GetAdressOfTemporary(iterVar);
 		GenAssignmentToStackMem(code, node->GetLowerBound(), actualAddress, iterVarType);
-	
+
+
 		// Now we must generate the jump instruction.
-		code += "\njmp SHORT " + bodyLabel + "\n";
+		code += "\njmp " + bodyLabel + "\n";
 
 		// And then for the actual head, where we increment the iter variable.
 
@@ -775,9 +840,9 @@ namespace Body
 		GenForLoopHeadComparison(code, node->GetUpperBound(), exitLabel, actualAddress, iterVarType);
 	}
 
-	void GenerateFunctionBody(std::string& code, AST::Node* node, i32* const largestTempAllocation);
+	void GenerateFunctionBody(std::string& code, AST::Node* node, i32* const largestTempAllocation, const i32 reservedMem);
 
-	inline static void GenForLoopCode(std::string& code, AST::ForLoopNode* node, i32* const largestTempAllocation)
+	inline static void GenForLoopCode(std::string& code, AST::ForLoopNode* node, i32* const largestTempAllocation, const i32 reservedMem)
 	{
 		// The iter var(typically i in C/C++ for loops) will be maintained as a temporary variable.
 		const PrimitiveType iterVarType = PrimitiveType::ui64;
@@ -798,10 +863,13 @@ namespace Body
 
 		// Generate body
 		code += bodyLabel + ":\n";
-		GenerateFunctionBody(code, node->GetBody(), largestTempAllocation);
+		// Important -- This ensures that when GenerateFunctionBody clears the temporaries section, it doesn't completely clear
+		// everything, including our iter variable, instead clearing everything up until the iter variable.
+		const i32 reservedMemSize = GetSizeFromType(iterVarType) + reservedMem;
+		GenerateFunctionBody(code, node->GetBody(), largestTempAllocation, reservedMemSize);
 
 		// Jump back to head after executing an iteration.
-		code += "jmp SHORT " + headLabel + "\n";
+		code += "jmp " + headLabel + "\n";
 
 		// Place the exit label.
 		code += exitLabel + ":\n";
@@ -840,7 +908,7 @@ namespace Body
 			}
 			default:
 			{
-				wprintf(L"ERROR: No type deducible from node n in " __FUNCSIG__ "\n");
+				wprintf(L"ERROR: No type deducible from node n in " __FUNCTION__ "\n");
 				Exit(ErrCodes::unknown_type);
 				break;
 			}
@@ -918,13 +986,18 @@ namespace Body
 		}
 	}
 	
-	void GenerateFunctionBody(std::string& code, AST::Node* node, i32* const largestTempAllocation)
+	void GenerateFunctionBody(std::string& code, AST::Node* node, i32* const largestTempAllocation, const i32 reservedMem)
 	{
-		auto gatherLargestAllocation = [](i32* const out, i32 newAllocSize) -> void {
+		auto gatherLargestAllocation = [](i32* const out, const i32 newAllocSize) -> void {
 			if (newAllocSize > *out)
 			{
 				*out = newAllocSize;
 			}
+		};
+
+		auto enforceAllocationPolicy = [](const auto gatherLargestAllocation, i32* const largestTempAllocation, i32* const temporariesStack, const i32 reservedMem) -> void {
+			gatherLargestAllocation(largestTempAllocation, *temporariesStack);
+			*temporariesStack = reservedMem;
 		};
 
 		visitedNodes.push_back(node);
@@ -934,15 +1007,14 @@ namespace Body
 			case Node_k::OpNode:
 			{
 				// This is just a lone op node without assignment, but we'll perform the evaluation.
-				// Because of this, we're supplying the default type.
 				ResetTempsNaming();
 				TempVar t0 = GenOpNodeCode(code, node);
 				
 				// Check to see if the allocation done by the expression evaluation of GenOpNodeCode() requires more memory than the last evaluation.
-				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
+				//gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
 				// Enforce allocation policy.
-				CurrentFunctionMetaData::temporariesStackSectionSize = 0;
-
+				//CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+				enforceAllocationPolicy(gatherLargestAllocation, largestTempAllocation, &CurrentFunctionMetaData::temporariesStackSectionSize, reservedMem);
 
 
 
@@ -999,9 +1071,9 @@ namespace Body
 				{
 				case Node_k::SymNode:
 				{
-					//output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)" +
-					//	"\nmov " + RefLocalVar(stackLocation, exprType) + ", " + GetReg(RG::RAX, exprType) + "\n";
-					output = "\n; (local var at stackLoc " + std::to_string(stackLocation) + ") = Result of expr(rax)\n" +
+					AST::SymNode* asSymNode = (AST::SymNode*)assNodeVar;
+
+					output = "\n; " + MangleName(asSymNode->GetName().c_str()) + " = Result of expr(rax)\n" +
 									 PushRegIntoMem(RG::RAX, stackLocation, exprType) + "\n";
 
 					break;
@@ -1068,8 +1140,9 @@ namespace Body
 
 				code += output;
 
-				gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
-				CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+				//gatherLargestAllocation(largestTempAllocation, CurrentFunctionMetaData::temporariesStackSectionSize);
+				//CurrentFunctionMetaData::temporariesStackSectionSize = 0;
+				enforceAllocationPolicy(gatherLargestAllocation, largestTempAllocation, &CurrentFunctionMetaData::temporariesStackSectionSize, reservedMem);
 				
 				break;
 			}
@@ -1104,8 +1177,21 @@ namespace Body
 				
 				PushArgsIntoRegs(code, asFunctionCallNode);
 
-				//code += "\ncall " + std::string(std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()))) + "\n";
+				// Align the stack by a multiple of 16 when calling external functions(not necessary for BC:PL calls, but is for external libc calls.
+				// Todo: will probably need to be bigger than 16 bytes in the future.
+				const i32 alignmentPadding = 16;
+				std::string alignmentPaddingString = std::to_string(alignmentPadding);
+				if (entry->asFunction.isExtern)
+				{
+					code += "\n; Align by " + alignmentPaddingString + " (16 byte alignment is a requirement for extern calls)\n" \
+									"sub RSP, " + alignmentPaddingString;
+				}
 				code += "\ncall " + entry->functionName + "\n";
+				if (entry->asFunction.isExtern)
+				{
+					code += "; Maintain alignment\n" \
+									"add RSP, " + alignmentPaddingString + "\n";
+				}
 
 				break;
 			}
@@ -1113,7 +1199,9 @@ namespace Body
 			{
 				AST::ForLoopNode* asForLoopNode = (AST::ForLoopNode*)node;
 
-				GenForLoopCode(code, asForLoopNode, largestTempAllocation);
+				GenForLoopCode(code, asForLoopNode, largestTempAllocation, reservedMem);
+
+				enforceAllocationPolicy(gatherLargestAllocation, largestTempAllocation, &CurrentFunctionMetaData::temporariesStackSectionSize, reservedMem);
 
 				break;
 			}
@@ -1126,7 +1214,7 @@ namespace Body
 			{
 				continue;
 			}
-			GenerateFunctionBody(code, child, largestTempAllocation);
+			GenerateFunctionBody(code, child, largestTempAllocation, reservedMem);
 		}
 	}
 }
@@ -1152,7 +1240,6 @@ namespace Boilerplate
 		return result;
 	}
 
-	// TODO: Generation of the data and code sections should probably be handled differently, and maybe move these out from this namespace.
 	inline static void GenerateDataSection(std::string& code)
 	{
 		code += ".data\n\n\n";
@@ -1216,15 +1303,10 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 		std::string mangledFuncName;
 		if (asFunctionNode->GetName() == std::wstring(WideMainFunctionName))
 		{
-			// Stick the main function name (in BCL) in there as a comment.
-			//mangledFuncName = "; main (In BCL: " + std::string(NarrowMainFunctionName) + ")\nmain";
 			mangledFuncName = "main";
 		}
 		else
 		{
-			//char* nameCStr = MangleFunctionName(asFunctionNode->GetName().c_str());
-			//mangledFuncName = std::string(nameCStr);
-			//free(nameCStr);
 			mangledFuncName = asFunctionNode->GetSymTabEntry()->functionName;
 		}
 		CurrentFunctionMetaData::funcName = mangledFuncName;
@@ -1237,7 +1319,7 @@ void GenerateCode(AST::Node* nodeHead, std::string& outCode)
 
 		body = "\n\n\n; Body\n";
 		Body::RetrieveArgs(body, asFunctionNode);
-		Body::GenerateFunctionBody(body, childNode, &largestTemporariesAlloc);
+		Body::GenerateFunctionBody(body, childNode, &largestTemporariesAlloc, 0);
 
 		CurrentFunctionMetaData::temporariesStackSectionSize = largestTemporariesAlloc;
 

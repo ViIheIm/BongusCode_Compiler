@@ -71,6 +71,10 @@
 %token MINUS_OP
 %token MUL_OP
 %token DIV_OP
+%token SHL_OP
+%token SHR_OP
+%token AND_OP
+%token OR_OP
 
 %token LPAREN
 %token RPAREN
@@ -230,13 +234,17 @@ stmt: expr							{ $$ = $1; }
 expr: addExpr						{ $$ = $1; }
 		;
 
-addExpr: addExpr PLUS_OP mulExpr	{ $$ = AST::MakeOpNode(L'+', $1, $3); }
-			 | addExpr MINUS_OP mulExpr	{ $$ = AST::MakeOpNode(L'-', $1, $3); }
+addExpr: addExpr PLUS_OP mulExpr	{ $$ = AST::MakeOpNode(Op_k::ADD, $1, $3); }
+			 | addExpr MINUS_OP mulExpr	{ $$ = AST::MakeOpNode(Op_k::SUB, $1, $3); }
+			 | addExpr SHL_OP mulExpr		{ $$ = AST::MakeOpNode(Op_k::SHL, $1, $3); }
+			 | addExpr SHR_OP mulExpr		{ $$ = AST::MakeOpNode(Op_k::SHR, $1, $3); }
+			 | addExpr AND_OP mulExpr		{ $$ = AST::MakeOpNode(Op_k::AND, $1, $3); }
+			 | addExpr OR_OP mulExpr		{ $$ = AST::MakeOpNode(Op_k::OR, $1, $3);	 }
 			 | mulExpr
 			 ;
 
-mulExpr: mulExpr MUL_OP factor		{ $$ = AST::MakeOpNode(L'*', $1, $3); }
-			 | mulExpr DIV_OP factor		{ $$ = AST::MakeOpNode(L'/', $1, $3); }
+mulExpr: mulExpr MUL_OP factor		{ $$ = AST::MakeOpNode(Op_k::MUL, $1, $3); }
+			 | mulExpr DIV_OP factor		{ $$ = AST::MakeOpNode(Op_k::DIV, $1, $3); }
 			 | factor
 			 ;
 

@@ -26,7 +26,7 @@ namespace AST
 	// makeOpNode(Operator o) instantiates a node for an operation, such as
 	// addition or subtraction.
 	// Details of the operation must be provided by accessor methods.
-	Node* MakeOpNode(wchar_t op, Node* lhs, Node* rhs);
+	Node* MakeOpNode(const Op_k op, Node* lhs, Node* rhs);
 
 	// makeAssNode(Node var, Node expr) instantiates a node for an assignment to node var.
 	Node* MakeAssNode(Node* var, Node* expr);
