@@ -1,0 +1,100 @@
+|| This implementation of rule 110 was translated from the brilliant programmer tsoding's implementation in C.
+|| Rule 110 implementation in C:	https://gist.github.com/rexim/c595009436f87ca076e7c4a2fb92ce10
+|| Tsoding's GitHub:			https://gist.github.com/rexim
+
+
+|| External functions from libc.
+xenoverse i32 putwchar(i32 char).
+xenoverse i64 calloc(i64 numElems, i64 elemSz).
+xenoverse nihil free(i64¤ block).
+
+nihil Rule110(i64 boardSz).
+
+i32 Viviscere(nihil)
+{
+	Rule110(200).
+
+	Claudere 7.
+}
+
+nihil Rule110(i64 boardSz)
+{
+	|| Useful constants.
+	i64 sizeofi64.
+	sizeofi64 = 8.
+	i64 sizeofi32.
+	sizeofi32 = 4.
+	i32 newLine.
+	newLine = 10.
+
+	ui32¤ board.
+	board = calloc(boardSz, sizeofi32).
+
+
+	|| Seed board with a single 1.
+	i64 offset.
+	offset = boardSz - 2.
+	offset = offset * sizeofi32.
+	¤(board + offset) = 1.
+
+	|| Outer loop bound
+	i64 loopBnd.
+	loopBnd = boardSz - 2.
+
+	For (0 ⇢ loopBnd)
+	{
+		|| Will be either ' ' or '#'.
+		ui32 chrPool.
+		ui32 chrPoolEmpty.
+		chrPool = 35.
+		chrPoolEmpty = 32.
+
+		|| ¤(charPoolPtr + 0) will give you '#'
+		|| ¤(charPoolPtr + 4) will give you ' '
+		ui32¤ chrPoolPtr.
+		chrPoolPtr = &chrPool.
+
+
+		
+		i64 j.
+		j = 0.
+		For (0 ⇢ boardSz)
+		{
+			i32 resChr.
+			ui64 boardSubscript.
+			boardSubscript = ¤(board + (j * sizeofi32)).
+
+			|| boardSubscript = boardSubscript + 48.
+			|| putwchar(boardSubscript).
+
+			|| Will yield ' ' or 'A'.
+			resChr = ¤(chrPoolPtr + (boardSubscript * sizeofi32)).
+
+			putwchar(resChr).
+
+			j = j + 1.
+		}.
+
+		putwchar(newLine).
+
+		
+		i64 pattern.
+		pattern = ((¤board) ⪦ 1) ∨ ¤(board + sizeofi32).
+		i64 innerLoopBnd.
+		innerLoopBnd = boardSz - 1.
+		i64 k.
+		k = 1.
+		For (1 ⇢ innerLoopBnd)
+		{
+			i64 kPlusOne.
+			kPlusOne = k + 1.
+
+			pattern = ((pattern ⪦ 1) ∧ 7) ∨ ¤(board + (kPlusOne * sizeofi32)).
+			¤(board + (k * sizeofi32)) = (110 ⪧ pattern) ∧ 1.
+			k = k + 1.
+		}.
+	}.
+
+
+	free(board).
+}
