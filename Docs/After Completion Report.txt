@@ -1,0 +1,40 @@
+19-01-2025 to
+20-01-2025
+is when BongusCode became turing complete.
+I pushed the last bugfixes to the compiler(allowing nested for-loops to function properly) on the 19th,
+and on the 20th I finished translating tsoding's rule110 implementation in C to BC:PL.
+
+So by these 2 dates, BongusCode became turing complete.
+This is the first solo project I've ever seen through to the end, so it made me ask:
+
+What made BongusCode work?
+
+1. I kept a clear vision of what I wanted to accomplish.
+   The goal eventually landed at "make a language that compiles down to assembly, and that is turing complete".
+
+2. I kept it simple.
+   I truly understood the mantra "make it work, make it great, make it fast" (or what it was) from TGA when applying it to this project.
+   Before all I'd do is take a simple task and overengineer it in terms of performance.
+   In BongusCode I most often stuck with the simplest and easiest-to-implement implementation, and went in with refactoring sweeps as the codebase inevitable became more untidy.
+   For the some odd things that required a lot of thought and consideration, I did just that; I spent a few days thinking about a good enough solution, then implemented it.
+   This process of slowly sanding down the rough diamond is the correct approach, rather than trying to architect a perfect system before even writing a single line of code.
+
+3. I pivoted from trying to write everything from scratch to using readily available tooling.
+   During the early summer 2024 I restarted development from scratch, in which I went from trying to translate source code directly into assembly with a lexer that I stole from tsoding,
+   to restructuring everything into a by-the-book approach (lexer->parser->AST->assembly) using RE/Flex and Bison to generate the lexer and the parser.
+
+4. I did some reading.
+   When development started I tried to translate a source file directly into assembly without an AST.
+   I read up on compiler development and watched some videos, then restructured everything accordingly.
+
+5. I didn't set any deadlines, and I worked in small chunks over a long period of time on this project.
+   "Sometimes the wheel turns slowly, but it turns."
+
+6. I accept that there is always more work to be done on the project, and even still I consider it complete.
+   This language is by no means useful. It is still completely laden with bugs, and the turing test wast written in lockstep with bugfixing the compiler.
+   I had to rewrite the bc:pl source file to suit the compiler also on many fronts.
+   I might do some more bugfixing, but the project has officially reached it's end.
+
+7. Never pre-optimize.
+   You can often sacrifice code that respects perceived ideas of performance for code that is more ergonomic,
+   and then actually test the code and see what pieces actually drains performance and need to be addressed.
