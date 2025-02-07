@@ -499,10 +499,29 @@ namespace Body
 			// Arithmetical operators.
 			case Op_k::ADD:
 			{
+				/*
+					Transition from
+					add RAX, MEM			to
+
+					mov RCX, MEM
+					add RAX, RCX
+
+					This transition is for cases when a 64 bit value (e.g. pointer) is being calculated from
+					a pointer variable plus an offset, and this offset is of a type other than a 64-bit wide type,
+					the adding (or subtracting or any other arithmetical operation done with a source operand straight from memory)
+					of e.g. a 32 bit wide type will null out the top 4 bytes of RAX, invalidating your pointer.
+				*/
+				//std::string output = "\n; " + t0.name + " += " + t1.name + "\n" +
+				//	FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
+				//	OperateOnReg(RG::RAX, "add", t1ActualAdress, t1Type) + "\n" +
+				//	PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
 				std::string output = "\n; " + t0.name + " += " + t1.name + "\n" +
-					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
-					OperateOnReg(RG::RAX, "add", t1ActualAdress, t1Type) + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" \
+					"xor RCX, RCX\n" +
+					FetchIntoReg(RG::RCX, t1ActualAdress, t1Type) + "\n" \
+					"add RAX, RCX\n" +
 					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+					
 				code += output;
 
 				break;
@@ -510,8 +529,10 @@ namespace Body
 			case Op_k::SUB:
 			{
 				std::string output = "\n; " + t0.name + " -= " + t1.name + "\n" +
-					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
-					OperateOnReg(RG::RAX, "sub", t1ActualAdress, t1Type) + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" \
+					"xor RCX, RCX\n" +
+					FetchIntoReg(RG::RCX, t1ActualAdress, t1Type) + "\n" \
+					"sub RAX, RCX\n" +
 					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
 
 				code += output;
@@ -521,8 +542,10 @@ namespace Body
 			case Op_k::MUL:
 			{
 				std::string output = "\n; " + t0.name + " *= " + t1.name + "\n" +
-					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
-					OperateOnReg(RG::RAX, "imul", t1ActualAdress, t1Type) + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" \
+					"xor RCX, RCX\n" +
+					FetchIntoReg(RG::RCX, t1ActualAdress, t1Type) + "\n" \
+					"imul RAX, RCX\n" +
 					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
 
 				code += output;
@@ -554,8 +577,6 @@ namespace Body
 			// Bitwise operators.
 			case Op_k::SHL:
 			{
-				// We must first bring in the amount to shift left into RCX, because bitshifting left and right, we can't simply
-				// do "shl eax, DWORD PTR n[rsp]" from memory like we can with say add or sub.
 				std::string output = "\n; Bring in amount to shift left by into RCX(" + t1.name + ")\n" \
 					"xor RCX, RCX\n" + // Null out
 					FetchIntoReg(RG::RCX, t1ActualAdress, t1Type) + "\n" \
@@ -570,7 +591,6 @@ namespace Body
 			}
 			case Op_k::SHR:
 			{
-				// Same case as above
 				std::string output = "\n; Bring in amount to shift right by into RCX(" + t1.name + ")\n" \
 					"xor RCX, RCX\n" + // Null out
 					FetchIntoReg(RG::RCX, t1ActualAdress, t1Type) + "\n" \
@@ -586,9 +606,12 @@ namespace Body
 			case Op_k::AND:
 			{
 				std::string output = "\n; " + t0.name + " &= " + t1.name + "\n" +
-					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
-					OperateOnReg(RG::RAX, "and", t1ActualAdress, t1Type) + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" \
+					"xor RCX, RCX\n" +
+					FetchIntoReg(RG::RCX, t1ActualAdress, t1Type) + "\n" \
+					"and RAX, RCX\n" +
 					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+
 				code += output;
 
 				break;
@@ -596,9 +619,12 @@ namespace Body
 			case Op_k::OR:
 			{
 				std::string output = "\n; " + t0.name + " |= " + t1.name + "\n" +
-					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" +
-					OperateOnReg(RG::RAX, "or", t1ActualAdress, t1Type) + "\n" +
+					FetchIntoReg(RG::RAX, t0ActualAdress, t0Type) + "\n" \
+					"xor RCX, RCX\n" +
+					FetchIntoReg(RG::RCX, t1ActualAdress, t1Type) + "\n" \
+					"or RAX, RCX\n" +
 					PushRegIntoMem(RG::RAX, t0ActualAdress, t0Type);
+
 				code += output;
 
 				break;
