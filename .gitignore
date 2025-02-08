@@ -4,7 +4,10 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 # Ignore the Test_Output folder - it only contains examples that needn't be under version control.
-Test_Output/
+Test_Output
+
+# Ignore solution files.
+*.sln
 
 # User-specific files
 *.rsuser
