@@ -471,6 +471,30 @@ namespace Body
 			return output;
 	}
 
+	inline static std::string CallFunction(const std::string& funcName, const bool isExtern)
+	{
+		const auto callExternalFunction = [](const std::string& funcName) -> std::string {
+				// Align the stack by a multiple of 16 when calling external functions(not necessary for BC:PL calls, but is for external libc calls.
+				// Todo: will probably need to be bigger than 16 bytes in the future.
+				const i32 alignmentPadding = 16;
+				const std::string alignmentPaddingString = std::to_string(alignmentPadding);
+
+				std::string result = "; Align by " + alignmentPaddingString + " (16 byte alignment is a requirement for extern calls)\n" \
+														 "sub RSP, " + alignmentPaddingString + "\n"
+														 "call " + funcName + "\n" \
+														 "; Maintain alignment\n" \
+														 "add RSP, " + alignmentPaddingString;
+
+				return result;
+		};
+
+		const auto callInternalFunction = [](const std::string& funcName) -> std::string {
+			return std::string("call " + funcName);
+		};
+
+
+		return isExtern ? callExternalFunction(funcName) : callInternalFunction(funcName);
+	}
 
 	static TempVar GenOpNodeCode(std::string& code, AST::Node* node)
 	{
@@ -684,16 +708,18 @@ namespace Body
 
 			PushArgsIntoRegs(output, asFunctionCallNode);
 
-			//std::string mangledFunctionName = std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()));
-			std::string mangledFunctionName = asFunctionCallNode->GetSymTabEntry()->functionName;
+			SymTabEntry* entry = asFunctionCallNode->GetSymTabEntry();
 
-			const PrimitiveType funcRetType = asFunctionCallNode->GetSymTabEntry()->asFunction.retType;
+			//std::string mangledFunctionName = std::string(MangleFunctionName(asFunctionCallNode->GetName().c_str()));
+			std::string mangledFunctionName = entry->functionName;
+			
+			const PrimitiveType funcRetType = entry->asFunction.retType;
 			TempVar t0 = AllocStackSpace(&CurrentFunctionMetaData::temporariesStackSectionSize, GetSizeFromType(funcRetType), funcRetType);
 			const i32 t0ActualAdress = GetAdressOfTemporary(t0);
 
 			// Make sure to also store the result out into _t0.
 			output += "\n; " + t0.name + " = result of function " + mangledFunctionName + "\n" +
-								"call " + mangledFunctionName + "\n" +
+								CallFunction(mangledFunctionName, entry->asFunction.isExtern) + "\n" +
 								PushRegIntoMem(RG::RAX, t0ActualAdress, funcRetType);
 
 			code += output;
@@ -1203,21 +1229,7 @@ namespace Body
 				
 				PushArgsIntoRegs(code, asFunctionCallNode);
 
-				// Align the stack by a multiple of 16 when calling external functions(not necessary for BC:PL calls, but is for external libc calls.
-				// Todo: will probably need to be bigger than 16 bytes in the future.
-				const i32 alignmentPadding = 16;
-				std::string alignmentPaddingString = std::to_string(alignmentPadding);
-				if (entry->asFunction.isExtern)
-				{
-					code += "\n; Align by " + alignmentPaddingString + " (16 byte alignment is a requirement for extern calls)\n" \
-									"sub RSP, " + alignmentPaddingString;
-				}
-				code += "\ncall " + entry->functionName + "\n";
-				if (entry->asFunction.isExtern)
-				{
-					code += "; Maintain alignment\n" \
-									"add RSP, " + alignmentPaddingString + "\n";
-				}
+				code += "\n" + CallFunction(entry->functionName, entry->asFunction.isExtern) + "\n";
 
 				break;
 			}
