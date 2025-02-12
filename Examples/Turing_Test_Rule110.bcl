@@ -64,9 +64,6 @@ nihil Rule110(i64 boardSz)
 			ui64 boardSubscript.
 			boardSubscript = ¤(board + (j * sizeofi32)).
 
-			|| boardSubscript = boardSubscript + 48.
-			|| putwchar(boardSubscript).
-
 			|| Will yield ' ' or 'A'.
 			resChr = ¤(chrPoolPtr + (boardSubscript * sizeofi32)).
 
