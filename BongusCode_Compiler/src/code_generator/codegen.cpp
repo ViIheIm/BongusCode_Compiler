@@ -496,6 +496,17 @@ namespace Body
 		return isExtern ? callExternalFunction(funcName) : callInternalFunction(funcName);
 	}
 
+				return result;
+		};
+
+		const auto callInternalFunction = [](const std::string& funcName) -> std::string {
+			return std::string("call " + funcName);
+		};
+
+
+		return isExtern ? callExternalFunction(funcName) : callInternalFunction(funcName);
+	}
+
 	static TempVar GenOpNodeCode(std::string& code, AST::Node* node)
 	{
 		visitedNodes.push_back(node);
