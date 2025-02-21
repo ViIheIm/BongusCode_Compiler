@@ -1,0 +1,10 @@
+GNU Bison is available under the GNU General Public License which permits free redistribution or modification.
+
+GNU's page:
+https://www.gnu.org/
+
+GNU Bison's page:
+https://www.gnu.org/software/bison/
+
+Free Software Foundation's website:
+https://www.fsf.org/

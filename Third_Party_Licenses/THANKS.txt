@@ -1,0 +1,2 @@
+A big thanks to the Free Software Foundation and to Robert Van Engelen of Genivia Inc.!
+GNU Bison and RE/Flex are invaluable to BongusCode, and BongusCode wouldn't be possible without them.
