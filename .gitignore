@@ -6,6 +6,9 @@
 # Ignore the Test_Output folder - it only contains examples that needn't be under version control.
 Test_Output
 
+# Ignore images
+Docs
+
 # Ignore solution files.
 *.sln
 
